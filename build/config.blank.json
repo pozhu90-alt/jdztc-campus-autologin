@@ -1,0 +1,17 @@
+{
+  "username": "",
+  "credential_id": "CampusPortalCredential",
+  "wifi_names": ["JCU", "SXL*", "LIB*", "CAFE*", "HALL*", "JCI"],
+  "portal_entry_url": "http://172.29.0.2/a79.htm",
+  "portal_probe_url": "http://www.gstatic.com/generate_204",
+  "isp": "",
+  "ssid_rules": [],
+  "test_url": "http://www.baidu.com",
+  "browser": "edge",
+  "headless": false,
+  "autostart_delay_sec": 7,
+  "log_file": "campus_network.log",
+  "min_signal_percent": 30
+}
+
+
