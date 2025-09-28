@@ -123,7 +123,7 @@ function Connect-WifiSmart {
     $chosen = Select-WifiCandidate -WifiNames $WifiNames -SignalMargin $SignalMargin
     if (-not $chosen) { return $false }
     Ensure-OpenProfile -Ssid $chosen
-    cmd /c "netsh wlan connect name=`"$chosen`"" | Out-Null
+    cmd /c "netsh wlan connect name=\"$chosen\"" | Out-Null
     $sw = [Diagnostics.Stopwatch]::StartNew()
     while ($sw.Elapsed.TotalSeconds -lt $QuickWaitSec) {
         $iface = cmd /c "netsh wlan show interfaces" 2>$null
@@ -132,10 +132,11 @@ function Connect-WifiSmart {
     }
     # 连接不立即成功则尝试另一候选（若有）
     $alt = ($WifiNames | Where-Object { $_ -ne $chosen })
+    $scan = Scan-WifiNetworks
     foreach ($ssid in $alt) {
-        if (-not ($scan | Where-Object { $_.Ssid -eq $ssid })) { continue }
+        if (-not ($scan | Where-Object { $_.Ssid -eq $ssid -or $_.Ssid -like $ssid })) { continue }
         Ensure-OpenProfile -Ssid $ssid
-        cmd /c "netsh wlan connect name=`"$ssid`"" | Out-Null
+        cmd /c "netsh wlan connect name=\"$ssid\"" | Out-Null
         $sw.Restart()
         while ($sw.Elapsed.TotalSeconds -lt $QuickWaitSec) {
             $iface = cmd /c "netsh wlan show interfaces" 2>$null

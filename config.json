@@ -11,11 +11,11 @@
                    ],
     "portal_entry_url":  "http://172.29.0.2/a79.htm",
     "portal_probe_url":  "http://www.gstatic.com/generate_204",
-    "isp":  "",
+    "isp":  "unicom",
     "ssid_rules":  [
                        {
                            "pattern":  "JCI",
-                           "isp":  ""
+                           "isp":  "unicom"
                        },
                        {
                            "pattern":  "JCU",
@@ -44,5 +44,6 @@
     "autostart_delay_sec":  7,
     "log_file":  "campus_network.log",
     "min_signal_percent":  40,
-    "autostart_enabled":  true
+    "autostart_enabled":  true,
+    "windows_credential_id":  "CampusWindowsCredential"
 }

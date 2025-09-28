@@ -31,6 +31,13 @@ catch {
     exit 1
 }
 
+# 精准开机延迟：GUI中配置的小数秒通过 boot_extra_delay_ms 传递到这里
+try {
+    if ($cfg.boot_extra_delay_ms -and [int]$cfg.boot_extra_delay_ms -gt 0) {
+        Start-Sleep -Milliseconds ([int]$cfg.boot_extra_delay_ms)
+    }
+} catch {}
+
 try {
     Import-Module "$root\modules\wifi.psm1" -Force
     Log -msg "✅ WiFi module loaded"
@@ -123,8 +130,13 @@ if ($probeInfo -and $probeInfo.IPv4 -and ($probeInfo.IPv4 -notmatch '^169\.')) {
     # 尝试自动连接
     Log -msg "Attempting WiFi connection (smart scan) ..."
     $connectOk = $false
+    # 启动阶段网卡可能尚未完全就绪：尝试多次快速连接
     try {
-        $connectOk = Connect-WifiSmart -WifiNames $cfg.wifi_names -QuickWaitSec 2 -SignalMargin 10
+        $connectOk = $false
+        for ($t=0; $t -lt 3 -and -not $connectOk; $t++) {
+            $connectOk = Connect-WifiSmart -WifiNames $cfg.wifi_names -QuickWaitSec 3 -SignalMargin 10
+            if (-not $connectOk) { Start-Sleep -Milliseconds 600 }
+        }
     } catch { $connectOk = $false }
     Log -msg ("Connect-WifiSmart returned: $connectOk")
     if ($connectOk) {
@@ -219,9 +231,19 @@ catch {
     Log -msg ("CDP failed: $errMsg") -level "ERROR"
 }
 
-# 若CDP返回成功，立即退出，加速收尾
+# 若CDP返回成功，后台启动轻量保活后再退出
 if ($ok) {
-    Log -msg "Auth done, exit immediately" -level "SUCCESS"
+    try {
+        Import-Module "$root\modules\netdetect.psm1" -Force
+        # 后台轻量保活：45s/次，最长8分钟；不阻塞当前流程
+        Start-Job -Name KeepAliveJob -ScriptBlock {
+            Import-Module "$using:root\modules\netdetect.psm1" -Force
+            Keep-AliveNetwork -IntervalSec 45 -MaxMinutes 8 | Out-Null
+        } | Out-Null
+        Log -msg "Auth done, keepalive started in background" -level "SUCCESS"
+    } catch {
+        Log -msg ("Start keepalive failed: " + $_.Exception.Message) -level "WARN"
+    }
     exit 0
 }
 

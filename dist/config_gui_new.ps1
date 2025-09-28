@@ -70,8 +70,8 @@ $tbPwdL = New-Object System.Windows.Controls.TextBlock; $tbPwdL.Text=(CS @(0x657
 $PwdBox = New-Object System.Windows.Controls.PasswordBox; $PwdBox.Height=28; $PwdBox.Margin='0,4,0,4'
 [System.Windows.Controls.Grid]::SetRow($PwdBox,1); [System.Windows.Controls.Grid]::SetColumn($PwdBox,1); [void]$grid.Children.Add($PwdBox)
 
-# Windows Password (新增)
-$tbWinPwdL = New-Object System.Windows.Controls.TextBlock; $tbWinPwdL.Text=(CS @(0x0057,0x0069,0x006E,0x0064,0x006F,0x0077,0x0073,0x5BC6,0x7801,0xFF08,0x9009,0x586B,0xFF09,0xFF1A)); $tbWinPwdL.VerticalAlignment='Center'; $tbWinPwdL.Margin='0,4,8,4'
+# Windows Password (新增) - 修改标签为"锁屏密码(无则不填)"
+$tbWinPwdL = New-Object System.Windows.Controls.TextBlock; $tbWinPwdL.Text=(CS @(0x9501,0x5C4F,0x5BC6,0x7801,0x0028,0x65E0,0x5219,0x4E0D,0x586B,0x0029)); $tbWinPwdL.VerticalAlignment='Center'; $tbWinPwdL.Margin='0,4,8,4'
 [System.Windows.Controls.Grid]::SetRow($tbWinPwdL,2); [System.Windows.Controls.Grid]::SetColumn($tbWinPwdL,0); [void]$grid.Children.Add($tbWinPwdL)
 $WinPwdBox = New-Object System.Windows.Controls.PasswordBox; $WinPwdBox.Height=28; $WinPwdBox.Margin='0,4,0,4'
 [System.Windows.Controls.Grid]::SetRow($WinPwdBox,2); [System.Windows.Controls.Grid]::SetColumn($WinPwdBox,1); [void]$grid.Children.Add($WinPwdBox)
@@ -159,7 +159,7 @@ if (-not (Test-Path $cfgPath)) {
             test_url = 'http://www.baidu.com'
             browser = 'edge'
             headless = $false
-            autostart_delay_sec = 7
+            autostart_delay_sec = 8
             log_file = 'campus_network.log'
             min_signal_percent = 30
         }
@@ -196,16 +196,20 @@ $cfg = $null
 try { $cfg = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $cfg = $null }
 if ($cfg) {
     if ($cfg.username) { $TxtUser.Text = [string]$cfg.username }
-    # ISP preset：严格按 config.json 恢复（不做推断），并在保存时写回
+    # ISP preset：修复显示逻辑
     try {
         $ispText = [string]$cfg.isp
-        $idx = switch -Regex ($ispText) {
-            '联通|unicom' { 0; break }
-            '电信|telecom|ctcc' { 1; break }
-            '移动|cmcc|yd' { 2; break }
-            default { 3 }
+        if ($ispText) {
+            $idx = switch ($ispText.ToLower()) {
+                'unicom' { 0; break }
+                'telecom' { 1; break }
+                'cmcc' { 2; break }
+                default { 3 }
+            }
+            $CmbISP.SelectedIndex = $idx
+        } else {
+            $CmbISP.SelectedIndex = 3
         }
-        $CmbISP.SelectedIndex = $idx
     } catch { $CmbISP.SelectedIndex = 3 }
     # Wi‑Fi mode by wifi_names：严格按 config.json 恢复（仅 ['JCI'] → JCI；否则学校网）
     $names = @()
@@ -237,19 +241,34 @@ if ($cfg) {
         if ($p0 -and ([string]$p0).Length -gt 0) { 
             # 创建与真实密码长度一致的占位符，提升用户体验
             $pwdLength = ([string]$p0).Length
-            $script:__pwdPlaceholderText = ('●' * $pwdLength)
+            $script:__pwdPlaceholderText = ('*' * $pwdLength)
             $PwdBox.Password = $script:__pwdPlaceholderText
             $script:__pwdPlaceholderActive = $true 
             # 保存原始密码的哈希用于验证（避免保存明文）
             $script:__pwdOriginalHash = ([System.Security.Cryptography.SHA256]::Create()).ComputeHash([System.Text.Encoding]::UTF8.GetBytes([string]$p0))
         }
     } catch {}
+    # Windows 密码占位：若上次保存过Windows密码，显示等长占位符
+    try {
+        if (-not (Get-Command Load-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+        $winCredId = if ($cfg.windows_credential_id) { [string]$cfg.windows_credential_id } else { 'CampusWindowsCredential' }
+        $wp0 = $null
+        try { $wp0 = Load-Secret -Id $winCredId } catch { $wp0 = $null }
+        if ($wp0 -and ([string]$wp0).Length -gt 0) {
+            $wlen = ([string]$wp0).Length
+            $script:__winPwdPlaceholderText = ('*' * $wlen)
+            $WinPwdBox.Password = $script:__winPwdPlaceholderText
+            $script:__winPwdPlaceholderActive = $true
+        }
+    } catch {}
 }
 
 # 缓存密码占位符状态
-$script:__pwdPlaceholderActive = $false
-$script:__pwdPlaceholderText = $null
-$script:__pwdOriginalHash = $null  # 用于验证占位符的原始密码哈希
+if ($null -eq $script:__pwdPlaceholderActive) { $script:__pwdPlaceholderActive = $false }
+if ($null -eq $script:__pwdPlaceholderText) { $script:__pwdPlaceholderText = $null }
+if ($null -eq $script:__pwdOriginalHash) { $script:__pwdOriginalHash = $null }
+if ($null -eq $script:__winPwdPlaceholderActive) { $script:__winPwdPlaceholderActive = $false }
+if ($null -eq $script:__winPwdPlaceholderText) { $script:__winPwdPlaceholderText = $null }
 
 # Signal label update
 $SldSignal.add_ValueChanged({ $LblSignal.Text = [string]([int]$SldSignal.Value) + '%' })
@@ -282,6 +301,29 @@ $PwdBox.Add_GotFocus({
     } catch {} 
 })
 
+# Windows 密码占位：事件
+$WinPwdBox.Add_PasswordChanged({ 
+    param($s,$e) 
+    try { 
+        if ($script:__winPwdPlaceholderActive) {
+            $currentPwd = [string]$WinPwdBox.Password
+            if ($currentPwd -ne [string]$script:__winPwdPlaceholderText) { 
+                $script:__winPwdPlaceholderActive = $false 
+            }
+        }
+    } catch {} 
+})
+
+$WinPwdBox.Add_GotFocus({ 
+    param($s,$e) 
+    try { 
+        if ($script:__winPwdPlaceholderActive -and ([string]$WinPwdBox.Password -eq [string]$script:__winPwdPlaceholderText)) {
+            $WinPwdBox.Password = ''
+            $script:__winPwdPlaceholderActive = $false
+        }
+    } catch {} 
+})
+
 function Get-ISPValue() {
     switch ($CmbISP.SelectedIndex) {
         0 { return 'unicom' }
@@ -307,21 +349,13 @@ function Save-SystemSecret {
     try {
         $systemSecretPath = Join-Path $env:ProgramData 'CampusNet\system_secrets.json'
         $systemDir = Split-Path $systemSecretPath -Parent
-        if (-not (Test-Path $systemDir)) { 
-            New-Item -ItemType Directory -Path $systemDir -Force | Out-Null 
-            # 设置目录权限，只允许SYSTEM和Administrators访问
-            $acl = Get-Acl $systemDir
-            $acl.SetAccessRuleProtection($true, $false)
-            $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule('SYSTEM', 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
-            $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule('Administrators', 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
-            $acl.SetAccessRule($systemRule)
-            $acl.SetAccessRule($adminRule)
-            Set-Acl -Path $systemDir -AclObject $acl
+        if (-not (Test-Path $systemDir)) {
+            New-Item -ItemType Directory -Path $systemDir -Force | Out-Null
         }
-        
+
         # 使用简单的Base64编码存储（不是真正的安全，但SYSTEM可以访问）
         $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($PlainPassword))
-        
+
         $data = @{}
         if (Test-Path $systemSecretPath) {
             try { $data = Get-Content $systemSecretPath -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable } catch {}
@@ -330,45 +364,6 @@ function Save-SystemSecret {
         ($data | ConvertTo-Json -Depth 10) | Out-File -FilePath $systemSecretPath -Encoding UTF8 -Force
         return $true
     } catch { return $false }
-}
-
-# Simple WPF password prompt for Windows account; returns plain string or $null
-function Read-WindowsPassword {
-    try {
-        $x = @"
-<Window xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
-        xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
-        Title='输入 Windows 密码' Height='160' Width='360' WindowStartupLocation='CenterScreen'>
-  <Grid Margin='16'>
-    <Grid.RowDefinitions>
-      <RowDefinition Height='Auto'/>
-      <RowDefinition Height='Auto'/>
-    </Grid.RowDefinitions>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width='Auto'/>
-      <ColumnDefinition Width='*'/>
-    </Grid.ColumnDefinitions>
-    <TextBlock Grid.Row='0' Grid.ColumnSpan='2' Margin='0,0,0,12'>为注册"开机自动连接"输入一次 Windows 密码（账户：$env:USERNAME）。若无密码，可留空并点"确定"，将使用 SYSTEM 账户。</TextBlock>
-    <TextBlock Grid.Row='1' Grid.Column='0' Margin='0,0,8,0' VerticalAlignment='Center'>密码：</TextBlock>
-    <PasswordBox Grid.Row='1' Grid.Column='1' Name='Pwd' Height='28'/>
-    <StackPanel Grid.Row='2' Grid.ColumnSpan='2' Orientation='Horizontal' HorizontalAlignment='Right' Margin='0,12,0,0'>
-      <Button Name='Ok' Content='确定' Width='80' Margin='0,0,8,0'/>
-      <Button Name='Cancel' Content='取消' Width='80'/>
-    </StackPanel>
-  </Grid>
-</Window>
-"@
-        $r = New-Object System.Xml.XmlNodeReader ([xml]$x)
-        $w = [Windows.Markup.XamlReader]::Load($r)
-        $pwdBox = $w.FindName('Pwd')
-        $ok  = $w.FindName('Ok')
-        $cancel = $w.FindName('Cancel')
-        $script:__pw = $null
-        $ok.Add_Click({ $script:__pw = [string]$pwdBox.Password; $w.DialogResult = $true; $w.Close() })
-        $cancel.Add_Click({ $script:__pw = $null; $w.DialogResult = $false; $w.Close() })
-        $null = $w.ShowDialog()
-        return $script:__pw
-    } catch { return $null }
 }
 
 function Save-All([bool]$andRun) {
@@ -413,10 +408,12 @@ function Save-All([bool]$andRun) {
         $j['headless'] = $true
 
         # Save config（写入稳定目录，同时保持根目录一致，避免用户看到两个不同配置）
+        # 持久化 Windows 凭据ID
+        if (-not $j.Contains('windows_credential_id') -or -not $j['windows_credential_id']) { $j['windows_credential_id'] = 'CampusWindowsCredential' }
         ($j | ConvertTo-Json -Depth 50) | Out-File -FilePath $cfgPath -Encoding UTF8 -Force
         try { ($j | ConvertTo-Json -Depth 50) | Out-File -FilePath (Join-Path $root 'config.json') -Encoding UTF8 -Force } catch {}
 
-        # 处理密码保存
+        # 处理密码保存（门户密码）
         $userPwdPlain = [string]$PwdBox.Password
         $credId = [string]$j['credential_id']
         if (-not $credId -or $credId.Trim().Length -eq 0) { $credId = 'CampusPortalCredential' }
@@ -432,9 +429,33 @@ function Save-All([bool]$andRun) {
             }
         } catch {}
 
-        # 获取Windows密码
+        # 获取Windows密码（识别占位符）
         $winPassword = [string]$WinPwdBox.Password
-        $hasWinPassword = ($winPassword -and $winPassword.Trim().Length -gt 0)
+        $hasWinPassword = $false
+        $isWinPlaceholder = $false
+        try {
+            if ($script:__winPwdPlaceholderActive -and ([string]$WinPwdBox.Password -eq [string]$script:__winPwdPlaceholderText)) { $isWinPlaceholder = $true }
+        } catch {}
+        
+        # 先尝试从已保存的密码中加载（无论是否为占位符）
+        try {
+            if (-not (Get-Command Load-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+            $winCredId = if ($j['windows_credential_id']) { [string]$j['windows_credential_id'] } else { 'CampusWindowsCredential' }
+            $wp0 = Load-Secret -Id $winCredId
+            if ($wp0 -and ([string]$wp0).Trim().Length -gt 0) { 
+                # 如果是占位符，使用已保存的密码
+                if ($isWinPlaceholder) {
+                    $winPassword = [string]$wp0
+                }
+                # 无论是否为占位符，只要能读取到已保存的密码，就视为有密码
+                $hasWinPassword = $true
+            }
+        } catch {}
+        
+        # 如果不是占位符且用户输入了新密码，优先使用用户输入
+        if (-not $isWinPlaceholder -and $winPassword -and $winPassword.Trim().Length -gt 0) { 
+            $hasWinPassword = $true 
+        }
 
         # 用户实际输入了新密码 → 覆盖保存
         if (-not $isPlaceholder -and $userPwdPlain -and $userPwdPlain.Trim().Length -gt 0) {
@@ -459,6 +480,16 @@ function Save-All([bool]$andRun) {
                     if (Test-Path $rootSecret) { try { Copy-Item $rootSecret -Destination (Join-Path $stableRoot 'secrets.json') -Force -ErrorAction SilentlyContinue } catch {} }
                 } catch { }
             }
+        }
+
+        # 保存 Windows 密码（若用户输入了新密码）
+        if ($hasWinPassword) {
+            try {
+                if (-not (Get-Command Save-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+                $winCredId2 = if ($j['windows_credential_id']) { [string]$j['windows_credential_id'] } else { 'CampusWindowsCredential' }
+                $secWin = ConvertTo-SecureString -String $winPassword -AsPlainText -Force
+                Save-Secret -Id $winCredId2 -Secret $secWin | Out-Null
+            } catch {}
         }
         
         # 用户清空了密码框（且不是占位符）→ 删除保存的密码
@@ -506,7 +537,20 @@ function Save-All([bool]$andRun) {
         try {
             if ($hasWinPassword) {
                 # 有Windows密码：使用用户账号运行
-                Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -User $env:USERNAME -Password $winPassword -RunLevel Highest -Force | Out-Null
+                try {
+                    # 获取完整的用户名格式（计算机名\用户名）
+                    $fullUserName = $env:USERDOMAIN + '\' + $env:USERNAME
+                    Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -User $fullUserName -Password $winPassword -RunLevel Highest -Force -ErrorAction Stop | Out-Null
+                } catch {
+                    # 如果完整格式失败，尝试只用用户名
+                    try {
+                        Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -User $env:USERNAME -Password $winPassword -RunLevel Highest -Force -ErrorAction Stop | Out-Null
+                    } catch {
+                        # 如果用户账户注册都失败，回退到SYSTEM
+                        $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+                        Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+                    }
+                }
             } else {
                 # 无Windows密码：使用SYSTEM账号运行
                 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
