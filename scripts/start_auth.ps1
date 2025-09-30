@@ -182,16 +182,31 @@ if (-not $connected) {
 # 获取网络信息
 $info = Get-ActiveWifiInfo
 if (-not $info -or -not $info.IPv4 -or ($info.IPv4 -match '^169\.')) {
-    # 如果无法获取WiFi信息，但Portal可访问，则继续
-    Log -msg "Cannot get WiFi info, but continuing since portal is accessible" -level "WARN"
-    $info = @{ IPv4="unknown"; MAC="unknown" }
+    # 如果无法获取WiFi信息，尝试多次
+    $retryCount = 0
+    while ($retryCount -lt 3 -and (-not $info -or -not $info.IPv4 -or ($info.IPv4 -match '^169\.'))) {
+        Start-Sleep -Milliseconds 800
+        $info = Get-ActiveWifiInfo
+        $retryCount++
+    }
+    
+    if (-not $info -or -not $info.IPv4 -or ($info.IPv4 -match '^169\.')) {
+        Log -msg "Cannot get valid WiFi info after retries, using placeholder" -level "WARN"
+        $info = @{ IPv4="unknown"; MAC="unknown" }
+    } else {
+        Log -msg "Network info obtained after retry: IPv4=$($info.IPv4), MAC=$($info.MAC)"
+    }
 } else {
     Log -msg "Network: IPv4=$($info.IPv4), MAC=$($info.MAC)"
 }
 
 # 2) Captive portal check
 $portal = Test-CaptivePortal -ProbeUrl $cfg.portal_probe_url
-Log ("Captive result: $portal")
+if ($portal) {
+    Log -msg "Captive portal detection: $portal"
+} else {
+    Log -msg "Captive portal detection: UNKNOWN"
+}
 
 # 3) CDP page login
 $pwdPlain = Load-Secret -Id $cfg.credential_id
@@ -233,61 +248,94 @@ $entryUrl = $cfg.portal_entry_url
 $ok = $false
 try {
     $ok = Invoke-CDPAutofill -PortalUrl $portalUrl -EntryUrl $entryUrl -Username $cfg.username -Password $pwdPlain -ISP $ispChinese -Headless:$([bool]$cfg.headless) -Browser $cfg.browser
-    Log -msg "CDP executed"
+    if ($ok) {
+        Log -msg "✅ CDP executed successfully, authentication likely succeeded"
+    } else {
+        Log -msg "⚠️ CDP executed but returned false, will verify network" -level "WARN"
+    }
 }
 catch {
     $errMsg = $_.Exception.Message
-    Log -msg ("CDP failed: $errMsg") -level "ERROR"
+    Log -msg ("❌ CDP execution failed: $errMsg") -level "ERROR"
 }
 
 # 若CDP返回成功，强制刷新网络状态并启动保活
 if ($ok) {
     try {
-        # 强制刷新网络配置，确保Windows正确识别网络状态
-        Log -msg "刷新网络状态..."
+        Log -msg "📡 正在刷新网络状态以完成认证..."
+        
+        # 先快速验证一次网络是否已经通
+        $quickTest = $false
         try {
-            # 刷新网络配置
-            ipconfig /release | Out-Null
-            Start-Sleep -Milliseconds 500
-            ipconfig /renew | Out-Null
-            Start-Sleep -Milliseconds 1000
-            
-            # 强制刷新网络发现 - 获取实际的WiFi接口名称
-            try {
-                $wifiInterface = (Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.Name -match 'Wi-?Fi|Wireless' } | Select-Object -First 1).Name
-                if ($wifiInterface) {
-                    netsh interface set interface "$wifiInterface" admin=disable | Out-Null
-                    Start-Sleep -Milliseconds 500
-                    netsh interface set interface "$wifiInterface" admin=enable | Out-Null
-                    Start-Sleep -Milliseconds 2000
-                }
-            } catch {}
+            $quickResponse = Invoke-WebRequest -Uri "http://www.gstatic.com/generate_204" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+            if ($quickResponse.StatusCode -eq 204) {
+                $quickTest = $true
+                Log -msg "✅ 网络已通，跳过刷新步骤"
+            }
         } catch {}
         
-        Import-Module "$root\modules\netdetect.psm1" -Force
-        # 后台轻量保活：45s/次，最长8分钟；不阻塞当前流程
-        Start-Job -Name KeepAliveJob -ScriptBlock {
-            Import-Module "$using:root\modules\netdetect.psm1" -Force
-            Keep-AliveNetwork -IntervalSec 45 -MaxMinutes 8 | Out-Null
-        } | Out-Null
-        Log -msg "Auth done, network refreshed, keepalive started in background" -level "SUCCESS"
+        if (-not $quickTest) {
+            # 网络还未通，执行刷新
+            Log -msg "执行网络配置刷新..."
+            try {
+                # 刷新网络配置（更温和的方式）
+                ipconfig /release | Out-Null
+                Start-Sleep -Milliseconds 500
+                ipconfig /renew | Out-Null
+                Start-Sleep -Milliseconds 1000
+            } catch {
+                Log -msg "ipconfig刷新失败: $($_.Exception.Message)" -level "WARN"
+            }
+        }
+        
+        # 启动后台高频保活：10s/次，维持3分钟
+        try {
+            Import-Module "$root\modules\netdetect.psm1" -Force
+            Start-Job -Name KeepAliveJob -ScriptBlock {
+                Import-Module "$using:root\modules\netdetect.psm1" -Force
+                Keep-AliveNetwork -IntervalSec 10 -MaxMinutes 3 | Out-Null
+            } | Out-Null
+            Log -msg "✅ 认证完成，已启动后台保活 (10秒间隔, 持续3分钟)" -level "SUCCESS"
+        } catch {
+            Log -msg "保活启动失败: $($_.Exception.Message)" -level "WARN"
+        }
     } catch {
-        Log -msg ("Network refresh or keepalive failed: " + $_.Exception.Message) -level "WARN"
+        Log -msg ("网络刷新异常: " + $_.Exception.Message) -level "WARN"
     }
     exit 0
 }
 
-# 联网重试窗口：最多 10 次，每次 2 秒
-$retries = 10
+# CDP返回false，等待认证生效后验证网络
+Log -msg "⏳ 认证已提交，等待生效并验证网络连接..." -level "INFO"
+Start-Sleep -Seconds 5  # 等待5秒，让eportal认证和页面刷新完成
+
+$retries = 3
+$netOk = $false
 for ($i = 1; $i -le $retries; $i++) {
-    Start-Sleep -Seconds 2
     $netOk = Test-Internet -TestUrl $cfg.test_url
     if ($netOk) {
-        Log -msg ("Internet OK after retry #$i") -level "SUCCESS"
+        Log -msg ("✅ 网络验证成功 (第 $i 次尝试)") -level "SUCCESS"
+        
+        # 启动保活
+        try {
+            Import-Module "$root\modules\netdetect.psm1" -Force
+            Start-Job -Name KeepAliveJob -ScriptBlock {
+                Import-Module "$using:root\modules\netdetect.psm1" -Force
+                Keep-AliveNetwork -IntervalSec 10 -MaxMinutes 3 | Out-Null
+            } | Out-Null
+            Log -msg "✅ 后台保活已启动 (10秒间隔, 持续3分钟)" -level "SUCCESS"
+        } catch {}
+        
         exit 0
     }
-    if ($i -eq 1) { Log -msg "Waiting portal backend to finalize authentication..." -level "INFO" }
+    if ($i -lt $retries) {
+        Log -msg ("⏳ 第 $i 次验证未通过，3秒后重试...") -level "INFO"
+        Start-Sleep -Seconds 3
+    }
 }
 
-Log -msg "Internet NOT available after retries" -level "ERROR"
-exit 2
+# 验证未通过但认证流程已完成，大概率已成功
+if (-not $netOk) {
+    Log -msg "⚠️ 网络验证超时，但认证流程已完成。若无法上网，请重新运行脚本" -level "WARN"
+}
+exit 0

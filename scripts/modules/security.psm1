@@ -59,7 +59,35 @@ function Load-Secret {
 		}
 	}
 	
-	# 如果DPAPI读取失败，尝试从系统级存储读取
+	# 如果DPAPI读取失败，尝试从用户级存储读取
+	try {
+		$userSecretPath = Join-Path $env:APPDATA 'CampusNet\user_secrets.json'
+		if (Test-Path $userSecretPath) {
+			$userData = Get-Content $userSecretPath -Raw -Encoding UTF8 | ConvertFrom-Json
+			$encoded = $userData.$Id
+			if ($encoded) {
+				# 解码Base64
+				$plainBytes = [Convert]::FromBase64String($encoded)
+				return [Text.Encoding]::UTF8.GetString($plainBytes)
+			}
+		}
+	} catch {}
+	
+	# 如果用户级存储也失败，尝试临时存储
+	try {
+		$tempSecretPath = Join-Path $env:TEMP 'CampusNet_user_secrets.json'
+		if (Test-Path $tempSecretPath) {
+			$tempData = Get-Content $tempSecretPath -Raw -Encoding UTF8 | ConvertFrom-Json
+			$encoded = $tempData.$Id
+			if ($encoded) {
+				# 解码Base64
+				$plainBytes = [Convert]::FromBase64String($encoded)
+				return [Text.Encoding]::UTF8.GetString($plainBytes)
+			}
+		}
+	} catch {}
+	
+	# 最后尝试从系统级存储读取（向后兼容）
 	try {
 		$systemSecretPath = Join-Path $env:ProgramData 'CampusNet\system_secrets.json'
 		if (Test-Path $systemSecretPath) {

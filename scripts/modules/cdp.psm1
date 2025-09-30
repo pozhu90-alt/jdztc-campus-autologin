@@ -1,22 +1,65 @@
-﻿function Start-Chromium {
-    param([ValidateSet('edge','chrome')][string]$Browser='edge',[int]$Port=0,[switch]$Headless)
-    $exe = $null
+﻿function Find-BrowserExecutable {
+    param([string]$BrowserType)
+    $candidates = @()
     $pf64 = $env:ProgramFiles
     $pf86 = ${env:ProgramFiles(x86)}
     $lad  = $env:LocalAppData
-    if ($Browser -eq 'edge') {
-        $candidates = @()
+    
+    if ($BrowserType -eq 'edge') {
+        # Standard Edge installation paths
         if ($pf64) { $candidates += (Join-Path $pf64 'Microsoft\Edge\Application\msedge.exe') }
         if ($pf86) { $candidates += (Join-Path $pf86 'Microsoft\Edge\Application\msedge.exe') }
         if ($lad)  { $candidates += (Join-Path $lad  'Microsoft\Edge\Application\msedge.exe') }
+        # Additional Edge paths
+        $candidates += 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+        $candidates += 'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
     } else {
-        $candidates = @()
+        # Standard Chrome installation paths
         if ($pf64) { $candidates += (Join-Path $pf64 'Google\Chrome\Application\chrome.exe') }
         if ($pf86) { $candidates += (Join-Path $pf86 'Google\Chrome\Application\chrome.exe') }
         if ($lad)  { $candidates += (Join-Path $lad  'Google\Chrome\Application\chrome.exe') }
+        # Additional Chrome paths
+        $candidates += 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
+        $candidates += 'C:\Program Files\Google\Chrome\Application\chrome.exe'
     }
-    foreach ($p in $candidates) { if (Test-Path $p) { $exe = $p; break } }
-    if (-not $exe) { return $null }
+    
+    # Find first existing executable
+    foreach ($p in $candidates) { 
+        if (Test-Path $p) { 
+            Write-Host "🔍 找到浏览器: $p" -ForegroundColor Green
+            return $p 
+        } 
+    }
+    return $null
+}
+
+function Start-Chromium {
+    param([ValidateSet('edge','chrome','auto')][string]$Browser='auto',[int]$Port=0,[switch]$Headless)
+    
+    $exe = $null
+    if ($Browser -eq 'auto') {
+        # Auto-detect: try Edge first, then Chrome
+        Write-Host "🔍 自动检测浏览器..."
+        $exe = Find-BrowserExecutable -BrowserType 'edge'
+        if (-not $exe) {
+            Write-Host "⚠️ Edge未找到，尝试Chrome..." -ForegroundColor Yellow
+            $exe = Find-BrowserExecutable -BrowserType 'chrome'
+            if ($exe) { $Browser = 'chrome' }
+        } else {
+            $Browser = 'edge'
+        }
+    } else {
+        $exe = Find-BrowserExecutable -BrowserType $Browser
+    }
+    
+    if (-not $exe) { 
+        Write-Host "❌ 未找到可用的浏览器 ($Browser)" -ForegroundColor Red
+        if ($Browser -ne 'auto') {
+            Write-Host "💡 尝试自动检测其他浏览器..." -ForegroundColor Yellow
+            return Start-Chromium -Browser 'auto' -Port $Port -Headless:$Headless
+        }
+        return $null 
+    }
 	if ($Port -eq 0) { $Port = Get-Random -Minimum 9222 -Maximum 9555 }
 	$userData = Join-Path $env:TEMP ("portal_cdp_" + $Port)
 	$browserArgs = @("--remote-debugging-port=$Port","--user-data-dir=$userData","--no-first-run","--no-default-browser-check","--disable-extensions")
@@ -431,4 +474,4 @@ function Invoke-CDPAutofill {
 	}
 }
 
-Export-ModuleMember -Function Invoke-CDPAutofill
+Export-ModuleMember -Function Invoke-CDPAutofill,Find-BrowserExecutable,Start-Chromium

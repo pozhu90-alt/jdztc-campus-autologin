@@ -328,34 +328,33 @@
                 }
             }
 
-			// 无论点击是否成功，立即并行触发一次 eportal 接口确认，贴近人工浏览器行为
+		// 登录提交后先执行认证流程，最后刷新页面
+		if (clicked) {
+			addLog('登录已提交，等待1秒...');
+			await wait(1000);
+			
+			// 先调用eportal接口完成认证
 			let directOk = false;
 			try {
-				// 直接使用学号原值作为账号，不追加后缀
 				directOk = await loginViaEportal(String(config.username||''), config.password||'');
 				if (directOk) addLog('✅ eportal 接口确认成功');
 			} catch(e) {}
-
-            // 等待成功信号（同页或新页不一定能感知，这里只做同页增益）
-			let success = false;
-            try {
-                success = !!(await until(() => {
-                    const txt = document.body && (document.body.innerText || '');
-                    const okTxt = /成功登录|已成功登录|认证成功|登录成功|联网成功|欢迎|Success/i.test(txt);
-                    const okUrl = /success|loginSuccess|auth_success|a11\.htm/i.test(location.href || '');
-                    const logoutBtn = /注销|下线|Logout/i.test(txt);
-                    return okTxt || okUrl || logoutBtn;
-                }, 6000, 300));
-            } catch(e) {}
-
-
-
-            // 成功后主动探测一次外网（不刷新页面，避免回到登录态）
-            if (success || directOk) {
-                addLog('✅ 侦测到成功信号，触发外网探测以完成放行...');
-                try { await fetch('http://www.gstatic.com/generate_204', {mode:'no-cors', cache:'no-store'}); } catch(e) {}
-                await wait(500);
-            }
+			
+			// 触发外网探测
+			try { 
+				await fetch('http://www.gstatic.com/generate_204', {mode:'no-cors', cache:'no-store'}); 
+				addLog('✅ 外网探测已触发');
+			} catch(e) {}
+			
+			// 最后刷新页面显示认证状态
+			await wait(500);
+			try {
+				location.reload();
+				addLog('✅ 页面刷新完成');
+			} catch(e) {
+				addLog('页面刷新失败: ' + e.message);
+			}
+		}
 
             addLog('=== 脚本执行完成 ===');
             addLog(`登录按钮点击: ${clicked ? '成功' : '失败'}`);
