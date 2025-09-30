@@ -12,10 +12,10 @@ $build  = $PSScriptRoot
 $dist   = Join-Path $root 'dist'
 if (-not (Test-Path $dist)) { New-Item -ItemType Directory -Path $dist | Out-Null }
 
-# 1) 准备嵌入文件映射（目标→源）
+# 1) Prepare embedded files mapping (target -> source)
 $appData = '%APPDATA%\\CampusNet'
 $embed = @{}
-$embed["$appData\\gui\\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui.ps1')
+$embed["$appData\\gui\\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui_new.ps1')
 $embed["$appData\\scripts\\start_auth.ps1"]          = (Join-Path $root 'scripts\start_auth.ps1')
 $embed["$appData\\scripts\\modules\\wifi.psm1"]     = (Join-Path $root 'scripts\modules\wifi.psm1')
 $embed["$appData\\scripts\\modules\\netdetect.psm1"] = (Join-Path $root 'scripts\modules\netdetect.psm1')
@@ -24,7 +24,7 @@ $embed["$appData\\scripts\\modules\\cdp.psm1"]       = (Join-Path $root 'scripts
 $embed["$appData\\portal_autofill\\autofill_core.js"] = (Join-Path $root 'portal_autofill\autofill_core.js')
 $embed["$appData\\tasks\\install_autostart.ps1"]      = (Join-Path $root 'tasks\install_autostart.ps1')
 
-# 选择嵌入的默认配置：Blank 模式使用 build\config.blank.json，否则使用根目录 config.json
+# Select embedded config: Blank mode uses build\config.blank.json, otherwise use root config.json
 $cfgSrc = (Join-Path $root 'config.json')
 if ($Blank) {
     $blankCfg = Join-Path $build 'config.blank.json'
@@ -32,12 +32,15 @@ if ($Blank) {
 }
 $embed["$appData\\config.default.json"] = $cfgSrc
 
-# 非 Blank 模式下才附带最近一次 Wi‑Fi 成功状态
+# Non-Blank mode includes last successful Wi-Fi state
 if (-not $Blank) {
-    if (Test-Path (Join-Path $root 'wifi_state.json')) { $embed["$appData\\wifi_state.json"] = (Join-Path $root 'wifi_state.json') }
+    $wifiState = Join-Path $root 'wifi_state.json'
+    if (Test-Path $wifiState) { 
+        $embed["$appData\\wifi_state.json"] = $wifiState 
+    }
 }
 
-# 2) 载入 ps2exe 并编译 launcher.ps1 为独立 EXE（无控制台）
+# 2) Load ps2exe and compile launcher.ps1 to standalone EXE (no console)
 . (Join-Path $build 'ps2exe.ps1')
 $launcher = Join-Path $build 'launcher.ps1'
 if (-not (Test-Path $launcher)) { throw "launcher.ps1 not found. Ensure build/launcher.ps1 exists" }
@@ -51,7 +54,7 @@ try {
     exit 1
 }
 
-# 3) 可选：ConfuserEx 混淆
+# 3) Optional: ConfuserEx obfuscation
 if ($Obfuscate) {
     $confDir = Join-Path $build 'confuser'
     $cli = @(
@@ -90,5 +93,3 @@ if ($Obfuscate) {
         Write-Host "Obfuscation may have failed. Check ConfuserEx output." -ForegroundColor Yellow
     }
 }
-
-
