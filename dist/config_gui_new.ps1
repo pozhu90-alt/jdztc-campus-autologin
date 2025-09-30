@@ -147,10 +147,11 @@ $tbAutoInfo.TextWrapping='Wrap'; $tbAutoInfo.Margin='0,8,0,8'; $tbAutoInfo.FontS
 
 # Buttons
 $spBtn = New-Object System.Windows.Controls.StackPanel; $spBtn.Orientation='Horizontal'; $spBtn.HorizontalAlignment='Right'
+$BtnRemoveTask = New-Object System.Windows.Controls.Button; $BtnRemoveTask.Content=(CS @(0x5220,0x9664,0x4EFB,0x52A1)); $BtnRemoveTask.Width=96; $BtnRemoveTask.Margin='0,8,8,0'; $BtnRemoveTask.Background='#FFFFE0E0'; $BtnRemoveTask.Foreground='#FF8B0000'
 $BtnSave = New-Object System.Windows.Controls.Button; $BtnSave.Content=(CS @(0x4FDD,0x5B58,0x914D,0x7F6E)); $BtnSave.Width=96; $BtnSave.Margin='0,8,8,0'
 $BtnSaveRun = New-Object System.Windows.Controls.Button; $BtnSaveRun.Content=(CS @(0x4FDD,0x5B58,0x5E76,0x8FDE,0x63A5)); $BtnSaveRun.Width=120; $BtnSaveRun.Margin='0,8,8,0'
 $BtnExit = New-Object System.Windows.Controls.Button; $BtnExit.Content=(CS @(0x9000,0x51FA)); $BtnExit.Width=72; $BtnExit.Margin='0,8,0,0'
-[void]$spBtn.Children.Add($BtnSave); [void]$spBtn.Children.Add($BtnSaveRun); [void]$spBtn.Children.Add($BtnExit)
+[void]$spBtn.Children.Add($BtnRemoveTask); [void]$spBtn.Children.Add($BtnSave); [void]$spBtn.Children.Add($BtnSaveRun); [void]$spBtn.Children.Add($BtnExit)
 [System.Windows.Controls.Grid]::SetRow($spBtn,8); [System.Windows.Controls.Grid]::SetColumnSpan($spBtn,2); [void]$grid.Children.Add($spBtn)
 
 $window.Content = $grid
@@ -667,6 +668,38 @@ function Save-All([bool]$andRun) {
         Show-Error $msg3
     }
 }
+
+# Remove Task Button Handler
+$BtnRemoveTask.Add_Click({
+    try {
+        # Check if task exists
+        $task = Get-ScheduledTask -TaskName 'CampusPortalAutoConnect' -ErrorAction SilentlyContinue
+        
+        if (-not $task) {
+            Show-Info (CS @(0x4EFB,0x52A1,0x8BA1,0x5212,0x4E0D,0x5B58,0x5728,0xFF0C,0x65E0,0x9700,0x5220,0x9664))
+            return
+        }
+        
+        # Confirm dialog
+        $result = [System.Windows.MessageBox]::Show(
+            (CS @(0x786E,0x8BA4,0x8981,0x5220,0x9664,0x5F00,0x673A,0x81EA,0x52A8,0x8FDE,0x63A5,0x4EFB,0x52A1,0xFF1F,0x000A,0x000A,0x5220,0x9664,0x540E,0xFF0C,0x7A0B,0x5E8F,0x5C06,0x4E0D,0x4F1A,0x5728,0x767B,0x5F55,0x65F6,0x81EA,0x52A8,0x8FDE,0x63A5,0x6821,0x56ED,0x7F51,0x3002,0x000A,0x5982,0x679C,0x4E0D,0x518D,0x4F7F,0x7528,0x672C,0x7A0B,0x5E8F,0xFF0C,0x8BF7,0x5220,0x9664,0x4EFB,0x52A1,0x540E,0x518D,0x5220,0x9664,0x0020,0x0065,0x0078,0x0065,0x0020,0x6587,0x4EF6,0x3002)),
+            (CS @(0x786E,0x8BA4,0x5220,0x9664)),
+            [System.Windows.MessageBoxButton]::YesNo,
+            [System.Windows.MessageBoxImage]::Warning
+        )
+        
+        if ($result -eq [System.Windows.MessageBoxResult]::Yes) {
+            # Remove scheduled task
+            Unregister-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Confirm:$false -ErrorAction Stop
+            
+            # Success message
+            Show-Info (CS @(0x2705,0x0020,0x4EFB,0x52A1,0x8BA1,0x5212,0x5DF2,0x6210,0x529F,0x5220,0x9664,0xFF01,0x000A,0x000A,0x7A0B,0x5E8F,0x5C06,0x4E0D,0x4F1A,0x5728,0x767B,0x5F55,0x65F6,0x81EA,0x52A8,0x8FD0,0x884C,0x3002,0x000A,0x5982,0x679C,0x8981,0x5378,0x8F7D,0x7A0B,0x5E8F,0xFF0C,0x8BF7,0x624B,0x52A8,0x5220,0x9664,0x0020,0x0065,0x0078,0x0065,0x0020,0x6587,0x4EF6,0x3002))
+        }
+    } catch {
+        $errMsg = (CS @(0x5220,0x9664,0x4EFB,0x52A1,0x5931,0x8D25,0xFF1A)) + $_.Exception.Message
+        Show-Error $errMsg
+    }
+})
 
 $BtnSave.Add_Click({ Save-All $false })
 $BtnSaveRun.Add_Click({ Save-All $true })
