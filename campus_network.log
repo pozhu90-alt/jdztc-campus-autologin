@@ -1799,3 +1799,237 @@
 [2025-09-28 23:19:28] [INFO] CDP executed
 [2025-09-28 23:19:30] [INFO] Waiting portal backend to finalize authentication...
 [2025-09-28 23:19:48] [ERROR] Internet NOT available after retries
+[2025-09-28 23:41:24] [INFO] ✅ WiFi module loaded
+[2025-09-28 23:41:24] [INFO] ✅ NetDetect module loaded
+[2025-09-28 23:41:24] [INFO] ✅ Security module loaded
+[2025-09-28 23:41:24] [INFO] ✅ CDP module loaded
+[2025-09-28 23:41:24] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-28 23:41:24] [INFO] 检测到校园网 'JCI'，信号强度=87%（阈值=40%）
+[2025-09-28 23:41:24] [INFO] Start auth pipeline
+[2025-09-28 23:41:24] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-28 23:41:28] [INFO] Connect-WifiSmart returned: True
+[2025-09-28 23:41:28] [INFO] WiFi connected successfully
+[2025-09-28 23:41:28] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-28 23:41:28] [INFO] Captive result: 
+[2025-09-28 23:41:43] [INFO] CDP executed
+[2025-09-28 23:41:45] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-28 23:42:03] [ERROR] Internet NOT available after retries
+[2025-09-28 23:47:47] [INFO] ✅ WiFi module loaded
+[2025-09-28 23:47:47] [INFO] ✅ NetDetect module loaded
+[2025-09-28 23:47:47] [INFO] ✅ Security module loaded
+[2025-09-28 23:47:47] [INFO] ✅ CDP module loaded
+[2025-09-28 23:47:47] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-28 23:47:48] [INFO] 检测到校园网 'JCI'，信号强度=87%（阈值=40%）
+[2025-09-28 23:47:48] [INFO] Start auth pipeline
+[2025-09-28 23:47:48] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-28 23:47:51] [INFO] Connect-WifiSmart returned: True
+[2025-09-28 23:47:51] [INFO] WiFi connected successfully
+[2025-09-28 23:47:51] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-28 23:47:52] [INFO] Captive result: 
+[2025-09-28 23:48:06] [INFO] CDP executed
+[2025-09-28 23:48:08] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-28 23:48:26] [ERROR] Internet NOT available after retries
+[2025-09-28 23:55:50] [INFO] ✅ WiFi module loaded
+[2025-09-28 23:55:50] [INFO] ✅ NetDetect module loaded
+[2025-09-28 23:55:50] [INFO] ✅ Security module loaded
+[2025-09-28 23:55:50] [INFO] ✅ CDP module loaded
+[2025-09-28 23:55:50] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-28 23:55:50] [INFO] 检测到校园网 'JCI'，信号强度=89%（阈值=40%）
+[2025-09-28 23:55:50] [INFO] Start auth pipeline
+[2025-09-28 23:55:51] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-28 23:55:52] [INFO] Connect-WifiSmart returned: True
+[2025-09-28 23:55:52] [INFO] WiFi connected successfully
+[2025-09-28 23:55:52] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-28 23:55:52] [INFO] Captive result: 
+[2025-09-28 23:55:55] [INFO] CDP executed
+[2025-09-28 23:55:55] [SUCCESS] Auth done, keepalive started in background
+[2025-09-28 23:57:35] [INFO] ✅ WiFi module loaded
+[2025-09-28 23:57:35] [INFO] ✅ NetDetect module loaded
+[2025-09-28 23:57:35] [INFO] ✅ Security module loaded
+[2025-09-28 23:57:35] [INFO] ✅ CDP module loaded
+[2025-09-28 23:57:35] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-28 23:57:35] [INFO] 检测到校园网 'JCI'，信号强度=89%（阈值=40%）
+[2025-09-28 23:57:35] [INFO] Start auth pipeline
+[2025-09-28 23:57:35] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-28 23:57:36] [INFO] Connect-WifiSmart returned: True
+[2025-09-28 23:57:36] [INFO] WiFi connected successfully
+[2025-09-28 23:57:36] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-28 23:57:36] [INFO] Captive result: 
+[2025-09-28 23:57:39] [INFO] CDP executed
+[2025-09-28 23:57:39] [SUCCESS] Auth done, keepalive started in background
+[2025-09-29 00:01:09] [INFO] ✅ WiFi module loaded
+[2025-09-29 00:01:09] [INFO] ✅ NetDetect module loaded
+[2025-09-29 00:01:09] [INFO] ✅ Security module loaded
+[2025-09-29 00:01:09] [INFO] ✅ CDP module loaded
+[2025-09-29 00:01:09] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 00:01:09] [INFO] 检测到校园网 'JCI'，信号强度=85%（阈值=40%）
+[2025-09-29 00:01:09] [INFO] Start auth pipeline
+[2025-09-29 00:01:10] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 00:01:11] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 00:01:11] [INFO] WiFi connected successfully
+[2025-09-29 00:01:11] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 00:01:11] [INFO] Captive result: 
+[2025-09-29 00:01:15] [INFO] CDP executed
+[2025-09-29 00:01:15] [SUCCESS] Auth done, keepalive started in background
+[2025-09-29 00:04:40] [INFO] ✅ WiFi module loaded
+[2025-09-29 00:04:40] [INFO] ✅ NetDetect module loaded
+[2025-09-29 00:04:40] [INFO] ✅ Security module loaded
+[2025-09-29 00:04:40] [INFO] ✅ CDP module loaded
+[2025-09-29 00:04:40] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 00:04:40] [INFO] 检测到校园网 'JCI'，信号强度=90%（阈值=40%）
+[2025-09-29 00:04:40] [INFO] Start auth pipeline
+[2025-09-29 00:04:40] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 00:04:43] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 00:04:43] [INFO] WiFi connected successfully
+[2025-09-29 00:04:43] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 00:04:44] [INFO] Captive result: 
+[2025-09-29 00:04:58] [INFO] CDP executed
+[2025-09-29 00:05:00] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 21:26:01] [INFO] ✅ WiFi module loaded
+[2025-09-29 21:26:01] [INFO] ✅ NetDetect module loaded
+[2025-09-29 21:26:01] [INFO] ✅ Security module loaded
+[2025-09-29 21:26:01] [INFO] ✅ CDP module loaded
+[2025-09-29 21:26:01] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 21:26:01] [INFO] 检测到校园网 'JCI'，信号强度=87%（阈值=40%）
+[2025-09-29 21:26:01] [INFO] Start auth pipeline
+[2025-09-29 21:26:01] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 21:26:06] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 21:26:06] [INFO] WiFi connected successfully
+[2025-09-29 21:26:06] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 21:26:07] [INFO] Captive result: 
+[2025-09-29 21:26:09] [INFO] CDP executed
+[2025-09-29 21:26:11] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 21:26:29] [ERROR] Internet NOT available after retries
+[2025-09-29 21:27:31] [INFO] ✅ WiFi module loaded
+[2025-09-29 21:27:31] [INFO] ✅ NetDetect module loaded
+[2025-09-29 21:27:31] [INFO] ✅ Security module loaded
+[2025-09-29 21:27:31] [INFO] ✅ CDP module loaded
+[2025-09-29 21:27:31] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 21:27:31] [INFO] 检测到校园网 'JCI'，信号强度=92%（阈值=40%）
+[2025-09-29 21:27:31] [INFO] Start auth pipeline
+[2025-09-29 21:27:31] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 21:27:35] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 21:27:35] [INFO] WiFi connected successfully
+[2025-09-29 21:27:35] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 21:27:35] [INFO] Captive result: 
+[2025-09-29 21:27:39] [INFO] CDP executed
+[2025-09-29 21:27:42] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 21:28:00] [ERROR] Internet NOT available after retries
+[2025-09-29 21:57:50] [INFO] ✅ WiFi module loaded
+[2025-09-29 21:57:50] [INFO] ✅ NetDetect module loaded
+[2025-09-29 21:57:50] [INFO] ✅ Security module loaded
+[2025-09-29 21:57:50] [INFO] ✅ CDP module loaded
+[2025-09-29 21:57:50] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 21:57:50] [INFO] 检测到校园网 'JCI'，信号强度=87%（阈值=40%）
+[2025-09-29 21:57:50] [INFO] Start auth pipeline
+[2025-09-29 21:57:50] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 21:57:54] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 21:57:54] [INFO] WiFi connected successfully
+[2025-09-29 21:57:54] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 21:57:54] [INFO] Captive result: 
+[2025-09-29 21:58:09] [INFO] CDP executed
+[2025-09-29 21:58:11] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 21:58:29] [ERROR] Internet NOT available after retries
+[2025-09-29 22:02:53] [INFO] ✅ WiFi module loaded
+[2025-09-29 22:02:53] [INFO] ✅ NetDetect module loaded
+[2025-09-29 22:02:53] [INFO] ✅ Security module loaded
+[2025-09-29 22:02:53] [INFO] ✅ CDP module loaded
+[2025-09-29 22:02:53] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 22:02:53] [INFO] 检测到校园网 'JCI'，信号强度=90%（阈值=40%）
+[2025-09-29 22:02:53] [INFO] Start auth pipeline
+[2025-09-29 22:02:53] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 22:02:55] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 22:02:55] [INFO] WiFi connected successfully
+[2025-09-29 22:02:55] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 22:02:55] [INFO] Captive result: 
+[2025-09-29 22:02:55] [ERROR] No saved password, run Save-Secret first
+[2025-09-29 22:09:08] [INFO] ✅ WiFi module loaded
+[2025-09-29 22:09:08] [INFO] ✅ NetDetect module loaded
+[2025-09-29 22:09:08] [INFO] ✅ Security module loaded
+[2025-09-29 22:09:08] [INFO] ✅ CDP module loaded
+[2025-09-29 22:09:08] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 22:09:08] [INFO] 检测到校园网 'JCI'，信号强度=87%（阈值=40%）
+[2025-09-29 22:09:08] [INFO] Start auth pipeline
+[2025-09-29 22:09:08] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 22:09:12] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 22:09:12] [INFO] WiFi connected successfully
+[2025-09-29 22:09:12] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 22:09:12] [INFO] Captive result: 
+[2025-09-29 22:09:12] [ERROR] No saved password, run Save-Secret first
+[2025-09-29 22:47:47] [INFO] ✅ WiFi module loaded
+[2025-09-29 22:47:47] [INFO] ✅ NetDetect module loaded
+[2025-09-29 22:47:47] [INFO] ✅ Security module loaded
+[2025-09-29 22:47:47] [INFO] ✅ CDP module loaded
+[2025-09-29 22:47:47] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 22:47:47] [INFO] 检测到校园网 'JCI'，信号强度=88%（阈值=40%）
+[2025-09-29 22:47:47] [INFO] Start auth pipeline
+[2025-09-29 22:47:47] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 22:47:51] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 22:47:51] [INFO] WiFi connected successfully
+[2025-09-29 22:47:51] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 22:47:51] [INFO] Captive result: 
+[2025-09-29 22:48:06] [INFO] CDP executed
+[2025-09-29 22:48:08] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 22:48:26] [ERROR] Internet NOT available after retries
+[2025-09-29 22:51:17] [INFO] ✅ WiFi module loaded
+[2025-09-29 22:51:17] [INFO] ✅ NetDetect module loaded
+[2025-09-29 22:51:17] [INFO] ✅ Security module loaded
+[2025-09-29 22:51:17] [INFO] ✅ CDP module loaded
+[2025-09-29 22:51:17] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 22:51:17] [INFO] 检测到校园网 'JCI'，信号强度=85%（阈值=40%）
+[2025-09-29 22:51:17] [INFO] Start auth pipeline
+[2025-09-29 22:51:17] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 22:51:21] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 22:51:21] [INFO] WiFi connected successfully
+[2025-09-29 22:51:21] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 22:51:21] [INFO] Captive result: 
+[2025-09-29 22:51:36] [INFO] CDP executed
+[2025-09-29 22:51:38] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 22:51:56] [ERROR] Internet NOT available after retries
+[2025-09-29 23:03:06] [INFO] ✅ WiFi module loaded
+[2025-09-29 23:03:06] [INFO] ✅ NetDetect module loaded
+[2025-09-29 23:03:07] [INFO] ✅ Security module loaded
+[2025-09-29 23:03:07] [INFO] ✅ CDP module loaded
+[2025-09-29 23:03:07] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 23:03:07] [INFO] 检测到校园网 'JCI'，信号强度=86%（阈值=40%）
+[2025-09-29 23:03:07] [INFO] Start auth pipeline
+[2025-09-29 23:03:07] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 23:03:08] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 23:03:08] [INFO] WiFi connected successfully
+[2025-09-29 23:03:08] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 23:03:09] [INFO] Captive result: 
+[2025-09-29 23:03:23] [INFO] CDP executed
+[2025-09-29 23:03:25] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 23:03:43] [ERROR] Internet NOT available after retries
+[2025-09-29 23:14:30] [INFO] ✅ WiFi module loaded
+[2025-09-29 23:14:30] [INFO] ✅ NetDetect module loaded
+[2025-09-29 23:14:30] [INFO] ✅ Security module loaded
+[2025-09-29 23:14:30] [INFO] ✅ CDP module loaded
+[2025-09-29 23:14:30] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 23:14:30] [INFO] 检测到校园网 'JCI'，信号强度=90%（阈值=40%）
+[2025-09-29 23:14:30] [INFO] Start auth pipeline
+[2025-09-29 23:14:30] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 23:14:34] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 23:14:34] [INFO] WiFi connected successfully
+[2025-09-29 23:14:35] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 23:14:35] [INFO] Captive result: 
+[2025-09-29 23:14:35] [INFO] ISP: unicom -> 中国联通
+[2025-09-29 23:14:50] [INFO] CDP executed
+[2025-09-29 23:14:52] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 23:15:10] [ERROR] Internet NOT available after retries
+[2025-09-29 23:21:55] [INFO] ✅ WiFi module loaded
+[2025-09-29 23:21:55] [INFO] ✅ NetDetect module loaded
+[2025-09-29 23:21:55] [INFO] ✅ Security module loaded
+[2025-09-29 23:21:55] [INFO] ✅ CDP module loaded
+[2025-09-29 23:21:55] [INFO] ✅ Invoke-CDPAutofill function available
+[2025-09-29 23:21:55] [INFO] 检测到校园网 'JCI'，信号强度=87%（阈值=40%）
+[2025-09-29 23:21:55] [INFO] Start auth pipeline
+[2025-09-29 23:21:55] [INFO] Attempting WiFi connection (smart scan) ...
+[2025-09-29 23:21:59] [INFO] Connect-WifiSmart returned: True
+[2025-09-29 23:21:59] [INFO] WiFi connected successfully
+[2025-09-29 23:22:00] [WARN] Cannot get WiFi info, but continuing since portal is accessible
+[2025-09-29 23:22:00] [INFO] Captive result: 
+[2025-09-29 23:22:00] [INFO] ISP: unicom -> 中国联通
+[2025-09-29 23:22:15] [INFO] CDP executed
+[2025-09-29 23:22:17] [INFO] Waiting portal backend to finalize authentication...
+[2025-09-29 23:22:35] [ERROR] Internet NOT available after retries

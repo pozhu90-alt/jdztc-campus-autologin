@@ -1,4 +1,17 @@
-﻿function Start-WlanService { Start-Service -Name WlanSvc -ErrorAction SilentlyContinue }
+﻿function Start-WlanService { 
+    # 确保WLAN服务启动并设置为自动启动
+    try {
+        Set-Service -Name WlanSvc -StartupType Automatic -ErrorAction SilentlyContinue
+        Start-Service -Name WlanSvc -ErrorAction SilentlyContinue
+        # 等待服务完全启动
+        $timeout = 10
+        $elapsed = 0
+        while ((Get-Service -Name WlanSvc).Status -ne 'Running' -and $elapsed -lt $timeout) {
+            Start-Sleep -Milliseconds 500
+            $elapsed += 0.5
+        }
+    } catch {}
+}
 
 function Enable-WifiAdapter {
 	try {
@@ -49,8 +62,17 @@ function Connect-Wifi {
 function Get-ActiveWifiInfo {
 	$iface = cmd /c "netsh wlan show interfaces" 2>$null
 	if (-not $iface -or $iface -notmatch '已连接|connected') { return $null }
-	$ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -match 'Wi-?Fi|Wireless' -and $_.IPAddress -notmatch '^169\.' } | Select-Object -First 1).IPAddress
-	$mac = (Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.Name -match 'Wi-?Fi|Wireless' } | Select-Object -First 1).MacAddress
+	
+	# 多次尝试获取IP地址，等待网络配置完成
+	$ip = $null
+	$mac = $null
+	for ($i = 0; $i -lt 5; $i++) {
+		$ip = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceAlias -match 'Wi-?Fi|Wireless' -and $_.IPAddress -notmatch '^169\.' } | Select-Object -First 1).IPAddress
+		$mac = (Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.Name -match 'Wi-?Fi|Wireless' } | Select-Object -First 1).MacAddress
+		if ($ip) { break }
+		Start-Sleep -Milliseconds 1000
+	}
+	
 	if (-not $ip) { return $null }
 	return [pscustomobject]@{ IPv4=$ip; MAC=$mac }
 }
@@ -59,21 +81,40 @@ Export-ModuleMember -Function Connect-Wifi,Get-ActiveWifiInfo
 
 # ======== 新增：快速扫描与智能连接 ========
 function Scan-WifiNetworks {
+    # 先尝试标准扫描
     $raw = cmd /c "netsh wlan show networks mode=bssid" 2>$null
     if (-not $raw) { return @() }
     $lines = $raw -split "`r?`n"
     $results = @()
     $currentSsid = $null
+    
     foreach ($l in $lines) {
         if ($l -match '^\s*SSID\s+\d+\s*:\s*(.+)$') {
             $currentSsid = ($Matches[1]).Trim()
-        } elseif ($currentSsid -and $l -match 'Signal\s*:\s*(\d+)%') {
+        } elseif ($currentSsid -and ($l -match '信号\s*:\s*(\d+)%' -or $l -match 'Signal\s*:\s*(\d+)%')) {
             $sig = [int]$Matches[1]
             $prev = $results | Where-Object { $_.Ssid -eq $currentSsid } | Select-Object -First 1
             if ($prev) { if ($sig -gt $prev.Signal) { $prev.Signal = $sig } }
             else { $results += [pscustomobject]@{ Ssid=$currentSsid; Signal=$sig } }
         }
     }
+    
+    # 如果没有信号信息，则使用简化扫描（无信号强度）
+    if ($results.Count -eq 0) {
+        $simpleRaw = cmd /c "netsh wlan show networks" 2>$null
+        if ($simpleRaw) {
+            $simpleLines = $simpleRaw -split "`r?`n"
+            foreach ($sl in $simpleLines) {
+                if ($sl -match '^\s*SSID\s+\d+\s*:\s*(.+)$') {
+                    $ssid = ($Matches[1]).Trim()
+                    if ($ssid -and $ssid -ne '') {
+                        $results += [pscustomobject]@{ Ssid=$ssid; Signal=50 }  # 默认信号50%
+                    }
+                }
+            }
+        }
+    }
+    
     return $results
 }
 
@@ -118,7 +159,7 @@ function Select-WifiCandidate {
 }
 
 function Connect-WifiSmart {
-    param([string[]]$WifiNames,[int]$QuickWaitSec=3,[int]$SignalMargin=10)
+    param([string[]]$WifiNames,[int]$QuickWaitSec=2,[int]$SignalMargin=10)
     Start-WlanService; Enable-WifiAdapter
     $chosen = Select-WifiCandidate -WifiNames $WifiNames -SignalMargin $SignalMargin
     if (-not $chosen) { return $false }
@@ -128,7 +169,7 @@ function Connect-WifiSmart {
     while ($sw.Elapsed.TotalSeconds -lt $QuickWaitSec) {
         $iface = cmd /c "netsh wlan show interfaces" 2>$null
         if ($iface -match $chosen -and $iface -match '已连接|connected') { Set-LastWifiSuccess -Ssid $chosen; return $true }
-        Start-Sleep -Milliseconds 200
+        Start-Sleep -Milliseconds 150
     }
     # 连接不立即成功则尝试另一候选（若有）
     $alt = ($WifiNames | Where-Object { $_ -ne $chosen })
@@ -141,7 +182,7 @@ function Connect-WifiSmart {
         while ($sw.Elapsed.TotalSeconds -lt $QuickWaitSec) {
             $iface = cmd /c "netsh wlan show interfaces" 2>$null
             if ($iface -match $ssid -and $iface -match '已连接|connected') { Set-LastWifiSuccess -Ssid $ssid; return $true }
-            Start-Sleep -Milliseconds 200
+            Start-Sleep -Milliseconds 150
         }
     }
     return $false

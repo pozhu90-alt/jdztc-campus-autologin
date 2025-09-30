@@ -14,34 +14,34 @@
     "isp":  "unicom",
     "ssid_rules":  [
                        {
-                           "pattern":  "JCI",
-                           "isp":  "unicom"
+                           "isp":  "unicom",
+                           "pattern":  "JCI"
                        },
                        {
-                           "pattern":  "JCU",
-                           "isp":  ""
+                           "isp":  "",
+                           "pattern":  "JCU"
                        },
                        {
-                           "pattern":  "SXL*",
-                           "isp":  ""
+                           "isp":  "",
+                           "pattern":  "SXL*"
                        },
                        {
-                           "pattern":  "LIB*",
-                           "isp":  ""
+                           "isp":  "",
+                           "pattern":  "LIB*"
                        },
                        {
-                           "pattern":  "CAFE*",
-                           "isp":  ""
+                           "isp":  "",
+                           "pattern":  "CAFE*"
                        },
                        {
-                           "pattern":  "HALL*",
-                           "isp":  ""
+                           "isp":  "",
+                           "pattern":  "HALL*"
                        }
                    ],
     "test_url":  "http://www.baidu.com",
     "browser":  "edge",
     "headless":  true,
-    "autostart_delay_sec":  7,
+    "autostart_delay_sec":  5,
     "log_file":  "campus_network.log",
     "min_signal_percent":  40,
     "autostart_enabled":  true,

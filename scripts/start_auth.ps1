@@ -133,9 +133,9 @@ if ($probeInfo -and $probeInfo.IPv4 -and ($probeInfo.IPv4 -notmatch '^169\.')) {
     # 启动阶段网卡可能尚未完全就绪：尝试多次快速连接
     try {
         $connectOk = $false
-        for ($t=0; $t -lt 3 -and -not $connectOk; $t++) {
-            $connectOk = Connect-WifiSmart -WifiNames $cfg.wifi_names -QuickWaitSec 3 -SignalMargin 10
-            if (-not $connectOk) { Start-Sleep -Milliseconds 600 }
+        for ($t=0; $t -lt 2 -and -not $connectOk; $t++) {
+            $connectOk = Connect-WifiSmart -WifiNames $cfg.wifi_names -QuickWaitSec 2 -SignalMargin 10
+            if (-not $connectOk) { Start-Sleep -Milliseconds 300 }
         }
     } catch { $connectOk = $false }
     Log -msg ("Connect-WifiSmart returned: $connectOk")
@@ -219,11 +219,20 @@ try {
     }
 } catch {}
 
+# 转换ISP代码为中文名称（CDP函数需要中文名称）
+$ispChinese = switch ($effectiveISP.ToLower()) {
+    'unicom' { '中国联通'; break }
+    'telecom' { '中国电信'; break }
+    'cmcc' { '中国移动'; break }
+    default { '中国联通' }  # 默认联通
+}
+Log -msg "ISP: $effectiveISP -> $ispChinese"
+
 $portalUrl = $cfg.portal_probe_url
 $entryUrl = $cfg.portal_entry_url
 $ok = $false
 try {
-    $ok = Invoke-CDPAutofill -PortalUrl $portalUrl -EntryUrl $entryUrl -Username $cfg.username -Password $pwdPlain -ISP $effectiveISP -Headless:$([bool]$cfg.headless) -Browser $cfg.browser
+    $ok = Invoke-CDPAutofill -PortalUrl $portalUrl -EntryUrl $entryUrl -Username $cfg.username -Password $pwdPlain -ISP $ispChinese -Headless:$([bool]$cfg.headless) -Browser $cfg.browser
     Log -msg "CDP executed"
 }
 catch {
@@ -231,18 +240,39 @@ catch {
     Log -msg ("CDP failed: $errMsg") -level "ERROR"
 }
 
-# 若CDP返回成功，后台启动轻量保活后再退出
+# 若CDP返回成功，强制刷新网络状态并启动保活
 if ($ok) {
     try {
+        # 强制刷新网络配置，确保Windows正确识别网络状态
+        Log -msg "刷新网络状态..."
+        try {
+            # 刷新网络配置
+            ipconfig /release | Out-Null
+            Start-Sleep -Milliseconds 500
+            ipconfig /renew | Out-Null
+            Start-Sleep -Milliseconds 1000
+            
+            # 强制刷新网络发现 - 获取实际的WiFi接口名称
+            try {
+                $wifiInterface = (Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.Name -match 'Wi-?Fi|Wireless' } | Select-Object -First 1).Name
+                if ($wifiInterface) {
+                    netsh interface set interface "$wifiInterface" admin=disable | Out-Null
+                    Start-Sleep -Milliseconds 500
+                    netsh interface set interface "$wifiInterface" admin=enable | Out-Null
+                    Start-Sleep -Milliseconds 2000
+                }
+            } catch {}
+        } catch {}
+        
         Import-Module "$root\modules\netdetect.psm1" -Force
         # 后台轻量保活：45s/次，最长8分钟；不阻塞当前流程
         Start-Job -Name KeepAliveJob -ScriptBlock {
             Import-Module "$using:root\modules\netdetect.psm1" -Force
             Keep-AliveNetwork -IntervalSec 45 -MaxMinutes 8 | Out-Null
         } | Out-Null
-        Log -msg "Auth done, keepalive started in background" -level "SUCCESS"
+        Log -msg "Auth done, network refreshed, keepalive started in background" -level "SUCCESS"
     } catch {
-        Log -msg ("Start keepalive failed: " + $_.Exception.Message) -level "WARN"
+        Log -msg ("Network refresh or keepalive failed: " + $_.Exception.Message) -level "WARN"
     }
     exit 0
 }

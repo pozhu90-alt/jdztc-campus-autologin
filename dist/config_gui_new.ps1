@@ -237,7 +237,8 @@ if ($cfg) {
     try {
         if (-not (Get-Command Load-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
         $p0 = $null
-        try { $p0 = Load-Secret -Id ([string]$cfg.credential_id) } catch { $p0 = $null }
+        $credId = if ($cfg.credential_id) { [string]$cfg.credential_id } else { 'CampusPortalCredential' }
+        try { $p0 = Load-Secret -Id $credId } catch { $p0 = $null }
         if ($p0 -and ([string]$p0).Length -gt 0) { 
             # 创建与真实密码长度一致的占位符，提升用户体验
             $pwdLength = ([string]$p0).Length
@@ -246,6 +247,12 @@ if ($cfg) {
             $script:__pwdPlaceholderActive = $true 
             # 保存原始密码的哈希用于验证（避免保存明文）
             $script:__pwdOriginalHash = ([System.Security.Cryptography.SHA256]::Create()).ComputeHash([System.Text.Encoding]::UTF8.GetBytes([string]$p0))
+        } else {
+            # 如果没有保存的密码，确保密码框为空
+            $PwdBox.Password = ''
+            $script:__pwdPlaceholderActive = $false
+            $script:__pwdPlaceholderText = $null
+            $script:__pwdOriginalHash = $null
         }
     } catch {}
     # Windows 密码占位：若上次保存过Windows密码，显示等长占位符
@@ -261,14 +268,39 @@ if ($cfg) {
             $script:__winPwdPlaceholderActive = $true
         }
     } catch {}
+} else {
+    # 如果没有配置文件，也尝试加载默认的密码
+    try {
+        if (-not (Get-Command Load-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+        $p0 = Load-Secret -Id 'CampusPortalCredential'
+        if ($p0 -and ([string]$p0).Length -gt 0) { 
+            $pwdLength = ([string]$p0).Length
+            $script:__pwdPlaceholderText = ('*' * $pwdLength)
+            $PwdBox.Password = $script:__pwdPlaceholderText
+            $script:__pwdPlaceholderActive = $true 
+            $script:__pwdOriginalHash = ([System.Security.Cryptography.SHA256]::Create()).ComputeHash([System.Text.Encoding]::UTF8.GetBytes([string]$p0))
+        }
+        
+        $wp0 = Load-Secret -Id 'CampusWindowsCredential'
+        if ($wp0 -and ([string]$wp0).Length -gt 0) {
+            $wlen = ([string]$wp0).Length
+            $script:__winPwdPlaceholderText = ('*' * $wlen)
+            $WinPwdBox.Password = $script:__winPwdPlaceholderText
+            $script:__winPwdPlaceholderActive = $true
+        }
+    } catch {}
 }
 
-# 缓存密码占位符状态
+# 缓存密码占位符状态 - 增强状态保护
 if ($null -eq $script:__pwdPlaceholderActive) { $script:__pwdPlaceholderActive = $false }
 if ($null -eq $script:__pwdPlaceholderText) { $script:__pwdPlaceholderText = $null }
 if ($null -eq $script:__pwdOriginalHash) { $script:__pwdOriginalHash = $null }
 if ($null -eq $script:__winPwdPlaceholderActive) { $script:__winPwdPlaceholderActive = $false }
 if ($null -eq $script:__winPwdPlaceholderText) { $script:__winPwdPlaceholderText = $null }
+
+# 防止占位符状态被意外重置的保护变量
+$script:__pwdPlaceholderInitialized = $script:__pwdPlaceholderActive
+$script:__winPwdPlaceholderInitialized = $script:__winPwdPlaceholderActive
 
 # Signal label update
 $SldSignal.add_ValueChanged({ $LblSignal.Text = [string]([int]$SldSignal.Value) + '%' })
@@ -368,9 +400,23 @@ function Save-SystemSecret {
 
 function Save-All([bool]$andRun) {
     try {
-        if (-not (Test-Path $cfgPath)) { throw ("Config not found: " + $cfgPath) }
-        $obj = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        if (-not $obj) { throw "Bad config format" }
+        if (-not (Test-Path $cfgPath)) { 
+            Show-Error ("配置文件未找到: " + $cfgPath)
+            return
+        }
+        
+        $obj = $null
+        try {
+            $obj = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        } catch {
+            Show-Error ("配置文件格式错误: " + $_.Exception.Message)
+            return
+        }
+        
+        if (-not $obj) { 
+            Show-Error "配置文件内容无效"
+            return
+        }
 
         # 规范为 hashtable，避免 PSObject 索引异常
         $j = [ordered]@{}
@@ -380,51 +426,102 @@ function Save-All([bool]$andRun) {
         $j['username'] = [string]$TxtUser.Text
 
         # Wi‑Fi names：按当前选择回写（学校网→恢复自动列表；JCI→仅 JCI）
-        if ($RbJCI.IsChecked -eq $true) { $j['wifi_names'] = @('JCI') }
-        if ($RbAuto.IsChecked -eq $true) { if ($script:__wifiNamesAuto) { $j['wifi_names'] = @($script:__wifiNamesAuto) } }
+        if ($RbJCI.IsChecked -eq $true) { 
+            $j['wifi_names'] = @('JCI') 
+        } elseif ($RbAuto.IsChecked -eq $true) { 
+            if ($script:__wifiNamesAuto) { 
+                # 确保是字符串数组
+                $j['wifi_names'] = @($script:__wifiNamesAuto | ForEach-Object { [string]$_ })
+            } else {
+                $j['wifi_names'] = @('JCU','SXL*','LIB*','CAFE*','HALL*','JCI')
+            }
+        }
         # ISP and signal threshold
         $j['isp'] = Get-ISPValue
         $j['min_signal_percent'] = [int]$SldSignal.Value
         # Sync JCI rule ISP with current selection to avoid stale overrides during connect
         try {
             $rules = @()
-            if ($j.Contains('ssid_rules')) { $rules = @($j['ssid_rules']) } else { $rules = @() }
-            if (-not $rules) { $rules = @() }
+            if ($j.Contains('ssid_rules') -and $j['ssid_rules']) { 
+                # 转换为标准哈希表数组，避免PSCustomObject序列化问题
+                foreach ($rule in $j['ssid_rules']) {
+                    $rules += @{
+                        pattern = [string]$rule.pattern
+                        isp = [string]$rule.isp
+                    }
+                }
+            }
+            
             $found = $false
             for ($ri = 0; $ri -lt $rules.Count; $ri++) {
-                $r = $rules[$ri]
-                try {
-                    $pattern = [string]$r.pattern
-                    if ($pattern -eq 'JCI') { $r.isp = $j['isp']; $rules[$ri] = $r; $found = $true; break }
-                } catch {}
+                if ($rules[$ri].pattern -eq 'JCI') { 
+                    $rules[$ri].isp = $j['isp']
+                    $found = $true
+                    break 
+                }
             }
-            if (-not $found) { $rules += @(@{ pattern='JCI'; isp=$j['isp'] }) }
+            if (-not $found) { 
+                $rules += @{ pattern='JCI'; isp=$j['isp'] }
+            }
             $j['ssid_rules'] = $rules
-        } catch {}
+        } catch {
+            # 如果处理失败，设置默认规则
+            $j['ssid_rules'] = @(@{ pattern='JCI'; isp=$j['isp'] })
+        }
 
         # Browser
         $j['browser'] = Get-BrowserValue
         # 总是启用headless模式，因为开机自动连接时没有用户界面
         $j['headless'] = $true
+        
+        # 确保必要字段存在，防止JSON处理错误
+        if (-not $j.Contains('autostart_delay_sec') -or $null -eq $j['autostart_delay_sec']) { $j['autostart_delay_sec'] = 7 }
+        if (-not $j.Contains('test_url') -or -not $j['test_url']) { $j['test_url'] = 'http://www.baidu.com' }
+        if (-not $j.Contains('log_file') -or -not $j['log_file']) { $j['log_file'] = 'campus_network.log' }
+        if (-not $j.Contains('portal_entry_url') -or -not $j['portal_entry_url']) { $j['portal_entry_url'] = 'http://172.29.0.2/a79.htm' }
+        if (-not $j.Contains('portal_probe_url') -or -not $j['portal_probe_url']) { $j['portal_probe_url'] = 'http://www.gstatic.com/generate_204' }
 
         # Save config（写入稳定目录，同时保持根目录一致，避免用户看到两个不同配置）
         # 持久化 Windows 凭据ID
         if (-not $j.Contains('windows_credential_id') -or -not $j['windows_credential_id']) { $j['windows_credential_id'] = 'CampusWindowsCredential' }
-        ($j | ConvertTo-Json -Depth 50) | Out-File -FilePath $cfgPath -Encoding UTF8 -Force
-        try { ($j | ConvertTo-Json -Depth 50) | Out-File -FilePath (Join-Path $root 'config.json') -Encoding UTF8 -Force } catch {}
+        
+        # 保存配置文件，包含错误处理
+        try {
+            $jsonContent = ($j | ConvertTo-Json -Depth 50)
+            $jsonContent | Out-File -FilePath $cfgPath -Encoding UTF8 -Force
+        } catch {
+            Show-Error ("保存配置文件失败: " + $_.Exception.Message)
+            return
+        }
+        
+        try { 
+            $jsonContent = ($j | ConvertTo-Json -Depth 50)
+            $jsonContent | Out-File -FilePath (Join-Path $root 'config.json') -Encoding UTF8 -Force 
+        } catch {}
 
         # 处理密码保存（门户密码）
         $userPwdPlain = [string]$PwdBox.Password
         $credId = [string]$j['credential_id']
         if (-not $credId -or $credId.Trim().Length -eq 0) { $credId = 'CampusPortalCredential' }
         
-        # 更严格的占位符检测逻辑
+        # 更严格的占位符检测逻辑 - 多重验证防止误判
         $isPlaceholder = $false
         try {
-            # 多重检查：1) 占位符标记激活 2) 密码与占位符文本完全一致 3) 原始哈希存在
-            if ($script:__pwdPlaceholderActive -and 
-                ([string]$PwdBox.Password -eq [string]$script:__pwdPlaceholderText) -and
-                ($null -ne $script:__pwdOriginalHash)) { 
+            # 主要检查：占位符标记激活 AND 密码与占位符文本一致 AND 原始哈希存在
+            $primaryCheck = ($script:__pwdPlaceholderActive -and 
+                            ([string]$PwdBox.Password -eq [string]$script:__pwdPlaceholderText) -and
+                            ($null -ne $script:__pwdOriginalHash))
+            
+            # 备用检查：如果主要标记失效，但密码明显是占位符字符
+            $backupCheck = ((-not $script:__pwdPlaceholderActive) -and 
+                           $script:__pwdPlaceholderInitialized -and
+                           ([string]$PwdBox.Password -match '^[\*]{8,}$' -or [string]$PwdBox.Password -match '^[\u25cf]{8,}$'))
+            
+            # 额外检查：检查是否为常见占位符模式
+            $patternCheck = (([string]$PwdBox.Password -match '^\*{3,}$' -or [string]$PwdBox.Password -match '^[\u25cf]{3,}$') -and 
+                            ([string]$PwdBox.Password).Length -ge 8)
+            
+            if ($primaryCheck -or $backupCheck -or $patternCheck) { 
                 $isPlaceholder = $true 
             }
         } catch {}
@@ -434,7 +531,20 @@ function Save-All([bool]$andRun) {
         $hasWinPassword = $false
         $isWinPlaceholder = $false
         try {
-            if ($script:__winPwdPlaceholderActive -and ([string]$WinPwdBox.Password -eq [string]$script:__winPwdPlaceholderText)) { $isWinPlaceholder = $true }
+            # Windows密码占位符检测 - 多重验证
+            $primaryWinCheck = ($script:__winPwdPlaceholderActive -and 
+                               ([string]$WinPwdBox.Password -eq [string]$script:__winPwdPlaceholderText))
+            
+            $backupWinCheck = ((-not $script:__winPwdPlaceholderActive) -and 
+                              $script:__winPwdPlaceholderInitialized -and
+                              ([string]$WinPwdBox.Password -match '^[\*]{6,}$' -or [string]$WinPwdBox.Password -match '^[\u25cf]{6,}$'))
+            
+            $patternWinCheck = (([string]$WinPwdBox.Password -match '^\*{3,}$' -or [string]$WinPwdBox.Password -match '^[\u25cf]{3,}$') -and 
+                              ([string]$WinPwdBox.Password).Length -ge 6)
+            
+            if ($primaryWinCheck -or $backupWinCheck -or $patternWinCheck) { 
+                $isWinPlaceholder = $true 
+            }
         } catch {}
         
         # 先尝试从已保存的密码中加载（无论是否为占位符）
@@ -457,43 +567,109 @@ function Save-All([bool]$andRun) {
             $hasWinPassword = $true 
         }
 
-        # 用户实际输入了新密码 → 覆盖保存
-        if (-not $isPlaceholder -and $userPwdPlain -and $userPwdPlain.Trim().Length -gt 0) {
-            # 额外检查：确保不是意外保存占位符字符
-            if ($userPwdPlain -ne $script:__pwdPlaceholderText) {
-                try {
-                    if (-not (Get-Command Save-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
-                    
-                    if ($hasWinPassword) {
-                        # 有Windows密码：使用用户DPAPI保存
-                        $sec = ConvertTo-SecureString -String $userPwdPlain -AsPlainText -Force
-                        Save-Secret -Id $credId -Secret $sec | Out-Null
-                    } else {
-                        # 无Windows密码：同时使用DPAPI和系统级存储
-                        $sec = ConvertTo-SecureString -String $userPwdPlain -AsPlainText -Force
-                        Save-Secret -Id $credId -Secret $sec | Out-Null
-                        Save-SystemSecret -Id $credId -PlainPassword $userPwdPlain | Out-Null
-                    }
-                    
-                    # 同步到稳定目录
-                    $rootSecret = Join-Path $root 'secrets.json'
-                    if (Test-Path $rootSecret) { try { Copy-Item $rootSecret -Destination (Join-Path $stableRoot 'secrets.json') -Force -ErrorAction SilentlyContinue } catch {} }
-                } catch { }
+        # 密码保存逻辑 - 增强占位符检测
+        $shouldSavePassword = $false
+        $realPassword = $null
+        
+        # 多重检查防止占位符被当作真实密码
+        if ($isPlaceholder) {
+            # 如果是占位符，从已保存的密码中获取真实密码
+            try {
+                if (-not (Get-Command Load-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+                $realPassword = Load-Secret -Id $credId
+                if ($realPassword -and ([string]$realPassword).Length -gt 0) {
+                    $shouldSavePassword = $true  # 重新保存现有密码以确保一致性
+                }
+            } catch {}
+        } else {
+            # 不是占位符，检查是否为有效的新密码
+            if ($userPwdPlain -and $userPwdPlain.Trim().Length -gt 0) {
+                # 多重验证：确保不是各种形式的占位符
+                $isActuallyPlaceholder = $false
+                if ($script:__pwdPlaceholderText) {
+                    $isActuallyPlaceholder = ($userPwdPlain -eq $script:__pwdPlaceholderText)
+                }
+                # 检查是否为纯星号占位符
+                if (-not $isActuallyPlaceholder) {
+                    $isActuallyPlaceholder = ($userPwdPlain -match '^\*{3,}$' -or $userPwdPlain -match '^[\u25cf]{3,}$')
+                }
+                
+                if (-not $isActuallyPlaceholder) {
+                    $realPassword = $userPwdPlain
+                    $shouldSavePassword = $true
+                }
             }
         }
-
-        # 保存 Windows 密码（若用户输入了新密码）
-        if ($hasWinPassword) {
+        
+        # 保存真实密码
+        if ($shouldSavePassword -and $realPassword) {
             try {
                 if (-not (Get-Command Save-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
-                $winCredId2 = if ($j['windows_credential_id']) { [string]$j['windows_credential_id'] } else { 'CampusWindowsCredential' }
-                $secWin = ConvertTo-SecureString -String $winPassword -AsPlainText -Force
-                Save-Secret -Id $winCredId2 -Secret $secWin | Out-Null
-            } catch {}
+                
+                if ($hasWinPassword) {
+                    # 有Windows密码：使用用户DPAPI保存
+                    $sec = ConvertTo-SecureString -String $realPassword -AsPlainText -Force
+                    Save-Secret -Id $credId -Secret $sec | Out-Null
+                } else {
+                    # 无Windows密码：同时使用DPAPI和系统级存储
+                    $sec = ConvertTo-SecureString -String $realPassword -AsPlainText -Force
+                    Save-Secret -Id $credId -Secret $sec | Out-Null
+                    Save-SystemSecret -Id $credId -PlainPassword $realPassword | Out-Null
+                }
+                
+                # 同步到稳定目录
+                $rootSecret = Join-Path $root 'secrets.json'
+                if (Test-Path $rootSecret) { try { Copy-Item $rootSecret -Destination (Join-Path $stableRoot 'secrets.json') -Force -ErrorAction SilentlyContinue } catch {} }
+            } catch { }
+        }
+
+        # 保存 Windows 密码（增强占位符检测）
+        if ($hasWinPassword) {
+            $shouldSaveWinPassword = $false
+            $realWinPassword = $null
+            
+            if ($isWinPlaceholder) {
+                # 如果是占位符，从已保存的密码中获取真实密码
+                try {
+                    if (-not (Get-Command Load-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+                    $winCredId = if ($j['windows_credential_id']) { [string]$j['windows_credential_id'] } else { 'CampusWindowsCredential' }
+                    $realWinPassword = Load-Secret -Id $winCredId
+                    if ($realWinPassword -and ([string]$realWinPassword).Length -gt 0) {
+                        $shouldSaveWinPassword = $true
+                    }
+                } catch {}
+            } else {
+                # 不是占位符，验证是否为有效密码
+                if ($winPassword -and $winPassword.Trim().Length -gt 0) {
+                    # 检查是否为占位符字符
+                    $isWinActuallyPlaceholder = $false
+                    if ($script:__winPwdPlaceholderText) {
+                        $isWinActuallyPlaceholder = ($winPassword -eq $script:__winPwdPlaceholderText)
+                    }
+                    # 检查是否为纯星号占位符
+                    if (-not $isWinActuallyPlaceholder) {
+                        $isWinActuallyPlaceholder = ($winPassword -match '^\*{3,}$' -or $winPassword -match '^[\u25cf]{3,}$')
+                    }
+                    
+                    if (-not $isWinActuallyPlaceholder) {
+                        $realWinPassword = $winPassword
+                        $shouldSaveWinPassword = $true
+                    }
+                }
+            }
+            
+            if ($shouldSaveWinPassword -and $realWinPassword) {
+                try {
+                    if (-not (Get-Command Save-Secret -ErrorAction SilentlyContinue)) { Import-Module (Join-Path $modulesPath 'security.psm1') -Force }
+                    $winCredId2 = if ($j['windows_credential_id']) { [string]$j['windows_credential_id'] } else { 'CampusWindowsCredential' }
+                    $secWin = ConvertTo-SecureString -String $realWinPassword -AsPlainText -Force
+                    Save-Secret -Id $winCredId2 -Secret $secWin | Out-Null
+                } catch {}
+            }
         }
         
-        # 用户清空了密码框（且不是占位符）→ 删除保存的密码
-        if (-not $isPlaceholder -and (-not $userPwdPlain -or $userPwdPlain.Trim().Length -eq 0)) {
+        # 处理密码删除情况（用户清空密码框且不是占位符）
+        if (-not $isPlaceholder -and (-not $shouldSavePassword)) {
             foreach ($secPath in @((Join-Path $root 'secrets.json'), (Join-Path $stableRoot 'secrets.json'))) {
                 if (-not (Test-Path $secPath)) { continue }
                 try {
@@ -502,7 +678,6 @@ function Save-All([bool]$andRun) {
                 } catch { }
             }
         }
-        # 若为占位符且未修改 → 保留原有密钥，不做任何变更
 
         # 设置开机自动连接（所有用户都启用）
         # ensure files in stable root
@@ -528,15 +703,32 @@ function Save-All([bool]$andRun) {
         try {
             if ($j.Contains('autostart_delay_sec') -and $j['autostart_delay_sec']) { $delay = [int]$j['autostart_delay_sec'] }
         } catch {}
+        
+        # 创建两个动作：先确保WLAN启动，再执行认证
+        $wlanPath = Join-Path $stableRoot 'scripts\ensure_wlan_startup.ps1'
         $authPath = Join-Path $stableRoot 'scripts\start_auth.ps1'
+        
+        # 主认证动作
         $argString = ('-WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f $authPath)
         $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $argString
+        
         $trigger = New-ScheduledTaskTrigger -AtStartup
         $trigger.Delay = ('PT{0}S' -f $delay)
+        
+        # 注册WLAN启动任务（更早执行）
+        try {
+            Unregister-ScheduledTask -TaskName 'CampusPortalEnsureWLAN' -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+            $wlanArgString = ('-WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}"' -f $wlanPath)
+            $wlanAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $wlanArgString
+            $wlanTrigger = New-ScheduledTaskTrigger -AtStartup
+            $wlanTrigger.Delay = 'PT1S'  # 1秒后启动WLAN检查
+            $wlanPrincipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+            Register-ScheduledTask -TaskName 'CampusPortalEnsureWLAN' -Action $wlanAction -Trigger $wlanTrigger -Principal $wlanPrincipal -Force | Out-Null
+        } catch {}
 
         try {
             if ($hasWinPassword) {
-                # 有Windows密码：使用用户账号运行
+                # 有Windows密码：使用用户账号运行，但改为系统启动触发器
                 try {
                     # 获取完整的用户名格式（计算机名\用户名）
                     $fullUserName = $env:USERDOMAIN + '\' + $env:USERNAME
