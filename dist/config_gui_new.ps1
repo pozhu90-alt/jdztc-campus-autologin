@@ -67,8 +67,8 @@ $window.FontSize = 14
 $grid = New-Object System.Windows.Controls.Grid
 $grid.Margin = '16'
 
-# rows - 精简为9行（删除Windows密码行）
-foreach ($h in @('Auto','Auto','Auto','Auto','Auto','Auto','Auto','*','Auto')) {
+# rows - 10行（添加安全提示行）
+foreach ($h in @('Auto','Auto','Auto','Auto','Auto','Auto','Auto','Auto','*','Auto')) {
     $rd = New-Object System.Windows.Controls.RowDefinition
     $rd.Height = $h
     [void]$grid.RowDefinitions.Add($rd)
@@ -93,7 +93,7 @@ $PwdBox = New-Object System.Windows.Controls.PasswordBox; $PwdBox.Height=28; $Pw
 $tbDelayL = New-Object System.Windows.Controls.TextBlock; $tbDelayL.Text=(CS @(0x767B,0x5F55,0x5EF6,0x8FDF,0xFF1A)); $tbDelayL.VerticalAlignment='Center'; $tbDelayL.Margin='0,4,8,4'
 [System.Windows.Controls.Grid]::SetRow($tbDelayL,2); [System.Windows.Controls.Grid]::SetColumn($tbDelayL,0); [void]$grid.Children.Add($tbDelayL)
 $spDelay = New-Object System.Windows.Controls.StackPanel; $spDelay.Orientation='Horizontal'; $spDelay.Margin='0,4,0,4'
-$SldDelay = New-Object System.Windows.Controls.Slider; $SldDelay.Minimum=0.1; $SldDelay.Maximum=3; $SldDelay.Value=1; $SldDelay.Width=200; $SldDelay.TickFrequency=0.1; $SldDelay.IsSnapToTickEnabled=$false
+$SldDelay = New-Object System.Windows.Controls.Slider; $SldDelay.Minimum=0; $SldDelay.Maximum=3; $SldDelay.Value=1; $SldDelay.Width=200; $SldDelay.TickFrequency=0.1; $SldDelay.IsSnapToTickEnabled=$false
 $LblDelay = New-Object System.Windows.Controls.TextBlock; $LblDelay.Text='1.0' + (CS @(0x79D2)); $LblDelay.Margin='12,0,0,0'; $LblDelay.VerticalAlignment='Center'
 $SldDelay.add_ValueChanged({ try { $LblDelay.Text = ([Math]::Round($SldDelay.Value, 1)).ToString('0.0') + (CS @(0x79D2)) } catch {} })
 [void]$spDelay.Children.Add($SldDelay); [void]$spDelay.Children.Add($LblDelay)
@@ -141,9 +141,15 @@ foreach($t in @('edge','chrome')){ $item=New-Object System.Windows.Controls.Comb
 
 # 添加模式说明
 $tbAutoInfo = New-Object System.Windows.Controls.TextBlock
-$tbAutoInfo.Text=(CS @(0x767B,0x5F55,0x542F,0x52A8,0xFF1A,0x8F93,0x5165,0x5BC6,0x7801,0x540E,0x81EA,0x52A8,0x8FDE,0x63A5,0xFF0C,0x4E0D,0x53D7,0x5FEB,0x901F,0x542F,0x52A8,0x5F71,0x54CD,0x3002,0x5EF6,0x8FDF,0x8303,0x56F4,0xFF1A,0x0030,0x002E,0x0031,0x002D,0x0033,0x79D2,0xFF0C,0x63A8,0x8350,0x0031,0x79D2,0x3002))
-$tbAutoInfo.TextWrapping='Wrap'; $tbAutoInfo.Margin='0,8,0,8'; $tbAutoInfo.FontSize=12; $tbAutoInfo.Foreground='DarkGreen'
+$tbAutoInfo.Text=(CS @(0x767B,0x5F55,0x542F,0x52A8,0xFF1A,0x8F93,0x5165,0x5BC6,0x7801,0x540E,0x81EA,0x52A8,0x8FDE,0x63A5,0xFF0C,0x4E0D,0x53D7,0x5FEB,0x901F,0x542F,0x52A8,0x5F71,0x54CD,0x3002,0x5EF6,0x8FDF,0x8303,0x56F4,0xFF1A,0x0030,0x002D,0x0033,0x79D2,0xFF0C,0x63A8,0x8350,0x0031,0x79D2,0x3002))
+$tbAutoInfo.TextWrapping='Wrap'; $tbAutoInfo.Margin='0,8,0,4'; $tbAutoInfo.FontSize=12; $tbAutoInfo.Foreground='DarkGreen'
 [System.Windows.Controls.Grid]::SetRow($tbAutoInfo,7); [System.Windows.Controls.Grid]::SetColumnSpan($tbAutoInfo,2); [void]$grid.Children.Add($tbAutoInfo)
+
+# 添加安全提示
+$tbSecurityInfo = New-Object System.Windows.Controls.TextBlock
+$tbSecurityInfo.Text=(CS @(0x1F512,0x0020,0x5B89,0x5168,0x63D0,0x793A,0xFF1A,0x5BC6,0x7801,0x4E0E,0x5B66,0x53F7,0x5747,0x52A0,0x5BC6,0x4FDD,0x5B58,0x5728,0x672C,0x5730,0x7535,0x8111,0x4E0A,0xFF0C,0x4EC5,0x60A8,0x7684,0x7535,0x8111,0x53EF,0x8BBF,0x95EE,0x3002))
+$tbSecurityInfo.TextWrapping='Wrap'; $tbSecurityInfo.Margin='0,4,0,8'; $tbSecurityInfo.FontSize=11; $tbSecurityInfo.Foreground='#FF0066CC'; $tbSecurityInfo.FontStyle='Italic'
+[System.Windows.Controls.Grid]::SetRow($tbSecurityInfo,8); [System.Windows.Controls.Grid]::SetColumnSpan($tbSecurityInfo,2); [void]$grid.Children.Add($tbSecurityInfo)
 
 # Buttons
 $spBtn = New-Object System.Windows.Controls.StackPanel; $spBtn.Orientation='Horizontal'; $spBtn.HorizontalAlignment='Right'
@@ -152,7 +158,7 @@ $BtnSave = New-Object System.Windows.Controls.Button; $BtnSave.Content=(CS @(0x4
 $BtnSaveRun = New-Object System.Windows.Controls.Button; $BtnSaveRun.Content=(CS @(0x4FDD,0x5B58,0x5E76,0x8FDE,0x63A5)); $BtnSaveRun.Width=120; $BtnSaveRun.Margin='0,8,8,0'
 $BtnExit = New-Object System.Windows.Controls.Button; $BtnExit.Content=(CS @(0x9000,0x51FA)); $BtnExit.Width=72; $BtnExit.Margin='0,8,0,0'
 [void]$spBtn.Children.Add($BtnRemoveTask); [void]$spBtn.Children.Add($BtnSave); [void]$spBtn.Children.Add($BtnSaveRun); [void]$spBtn.Children.Add($BtnExit)
-[System.Windows.Controls.Grid]::SetRow($spBtn,8); [System.Windows.Controls.Grid]::SetColumnSpan($spBtn,2); [void]$grid.Children.Add($spBtn)
+[System.Windows.Controls.Grid]::SetRow($spBtn,9); [System.Windows.Controls.Grid]::SetColumnSpan($spBtn,2); [void]$grid.Children.Add($spBtn)
 
 $window.Content = $grid
 
@@ -641,7 +647,6 @@ function Save-All([bool]$andRun) {
             $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -RunLevel Highest
             $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
             Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-            Show-Info ((CS @(0x2705,0x0020,0x767B,0x5F55,0x542F,0x52A8,0x4EFB,0x52A1,0x5DF2,0x521B,0x5EFA,0x0020,0x0028,0x5EF6,0x8FDF,0x007B,0x0030,0x007D,0x79D2,0x0029)) -f $loginDelay)
         } catch { 
             if ($_.Exception.Message -match "Access is denied|拒绝访问|0x80070005") {
                 Show-Error ((CS @(0x274C,0x0020,0x6743,0x9650,0x4E0D,0x8DB3,0xFF1A,0x8BF7,0x4EE5,0x7BA1,0x7406,0x5458,0x8EAB,0x4EFD,0x8FD0,0x884C,0x6B64,0x7A0B,0x5E8F)))
@@ -655,13 +660,16 @@ function Save-All([bool]$andRun) {
             if (Test-Path $startScript) {
                 $psArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File', $startScript)
                 Start-Process -FilePath 'powershell.exe' -ArgumentList $psArgs -WindowStyle Hidden | Out-Null
-                # 保存并连接：也显示保存成功提示
-                try { Show-Info (CS @(0x5DF2,0x4FDD,0x5B58,0xFF0C,0x6B63,0x5728,0x8FDE,0x63A5)) } catch {}
+                # 保存并连接：显示保存成功和正在连接的提示
+                $successMsg = (CS @(0x2705,0x0020,0x767B,0x5F55,0x542F,0x52A8,0x4EFB,0x52A1,0x5DF2,0x521B,0x5EFA,0x0020,0x0028,0x5EF6,0x8FDF,0x007B,0x0030,0x007D,0x79D2,0x0029,0x000A,0x000A,0x914D,0x7F6E,0x5DF2,0x4FDD,0x5B58,0xFF0C,0x6B63,0x5728,0x8FDE,0x63A5,0x6821,0x56ED,0x7F51,0x2026)) -f $loginDelay
+                try { Show-Info $successMsg } catch {}
             } else {
                 Show-Error "start_auth.ps1 not found."
             }
         } else {
-            Show-Info (CS @(0x914D,0x7F6E,0x5DF2,0x4FDD,0x5B58))
+            # 仅保存：显示任务创建成功和配置保存的提示
+            $successMsg = (CS @(0x2705,0x0020,0x767B,0x5F55,0x542F,0x52A8,0x4EFB,0x52A1,0x5DF2,0x521B,0x5EFA,0x0020,0x0028,0x5EF6,0x8FDF,0x007B,0x0030,0x007D,0x79D2,0x0029,0x000A,0x000A,0x914D,0x7F6E,0x5DF2,0x4FDD,0x5B58,0xFF01)) -f $loginDelay
+            Show-Info $successMsg
         }
     } catch {
         $msg3 = "Save failed: " + $_.Exception.Message
