@@ -1,7 +1,8 @@
 param(
-    [string]$OutputName = 'CampusNet_packed.exe',
+    [string]$OutputName = '小瓷连网.exe',
     [switch]$Obfuscate,
-    [switch]$Blank
+    [switch]$Blank,
+    [switch]$Debug
 )
 
 $ErrorActionPreference = 'SilentlyContinue'
@@ -15,7 +16,11 @@ if (-not (Test-Path $dist)) { New-Item -ItemType Directory -Path $dist | Out-Nul
 # 1) Prepare embedded files mapping (target -> source)
 $appData = '%APPDATA%\\CampusNet'
 $embed = @{}
-$embed["$appData\\gui\\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui_new.ps1')
+$embed["$appData\\gui\\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui_xiaoci.ps1')
+$embed["$appData\\gui\\avatar.png"]                  = (Join-Path $root 'dist\avatar.png')
+$embed["$appData\\gui\\minimize_avatar.png"]         = (Join-Path $root 'dist\minimize_avatar.png')
+$embed["$appData\\gui\\maximize_avatar.png"]         = (Join-Path $root 'dist\maximize_avatar.png')
+$embed["$appData\\gui\\close_avatar.png"]            = (Join-Path $root 'dist\close_avatar.png')
 $embed["$appData\\scripts\\start_auth.ps1"]          = (Join-Path $root 'scripts\start_auth.ps1')
 $embed["$appData\\scripts\\modules\\wifi.psm1"]     = (Join-Path $root 'scripts\modules\wifi.psm1')
 $embed["$appData\\scripts\\modules\\netdetect.psm1"] = (Join-Path $root 'scripts\modules\netdetect.psm1')
@@ -42,12 +47,39 @@ if (-not $Blank) {
 
 # 2) Load ps2exe and compile launcher.ps1 to standalone EXE (no console)
 . (Join-Path $build 'ps2exe.ps1')
-$launcher = Join-Path $build 'launcher.ps1'
-if (-not (Test-Path $launcher)) { throw "launcher.ps1 not found. Ensure build/launcher.ps1 exists" }
+# Use debug launcher if requested
+if ($Debug) {
+    $launcher = Join-Path $build 'launcher_debug.ps1'
+} else {
+    $launcher = Join-Path $build 'launcher.ps1'
+}
+if (-not (Test-Path $launcher)) { throw "launcher not found: $launcher" }
 
 $outFile = Join-Path $dist $OutputName
+
+# Check for icon file
+$iconFile = Join-Path $dist 'xi2o7-p1m0u-001.ico'
+if (-not (Test-Path $iconFile)) {
+    $iconFile = Join-Path $dist 'xiaoci_icon.ico'
+}
+
 try {
-    Invoke-ps2exe -inputFile $launcher -outputFile $outFile -noConsole -STA -title 'CampusNet' -product 'CampusNet' -company 'Campus' -description 'Auto WiFi + Portal' -embedFiles $embed -supportOS -winFormsDPIAware | Out-Null
+    if (Test-Path $iconFile) {
+        Write-Host "Using icon: $iconFile" -ForegroundColor Cyan
+        Invoke-ps2exe -inputFile $launcher -outputFile $outFile `
+            -noConsole -requireAdmin -STA `
+            -title 'XiaoCi Network' -product 'XiaoCi Network' -company 'Campus' `
+            -description 'Campus Network Auto Connect Tool' `
+            -iconFile $iconFile `
+            -embedFiles $embed -supportOS -winFormsDPIAware -verbose
+    } else {
+        Write-Host "No custom icon found, building without icon..." -ForegroundColor Yellow
+        Invoke-ps2exe -inputFile $launcher -outputFile $outFile `
+            -noConsole -requireAdmin -STA `
+            -title 'XiaoCi Network' -product 'XiaoCi Network' -company 'Campus' `
+            -description 'Campus Network Auto Connect Tool' `
+            -embedFiles $embed -supportOS -winFormsDPIAware -verbose
+    }
     Write-Host ("Built: " + $outFile) -ForegroundColor Green
 } catch {
     Write-Host ("ps2exe build failed: " + $_.Exception.Message) -ForegroundColor Red
