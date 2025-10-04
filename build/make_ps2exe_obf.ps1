@@ -26,6 +26,8 @@ $embed["$appData\\scripts\\modules\\wifi.psm1"]     = (Join-Path $root 'scripts\
 $embed["$appData\\scripts\\modules\\netdetect.psm1"] = (Join-Path $root 'scripts\modules\netdetect.psm1')
 $embed["$appData\\scripts\\modules\\security.psm1"]  = (Join-Path $root 'scripts\modules\security.psm1')
 $embed["$appData\\scripts\\modules\\cdp.psm1"]       = (Join-Path $root 'scripts\modules\cdp.psm1')
+$embed["$appData\\scripts\\modules\\stats.psm1"]     = (Join-Path $root 'scripts\modules\stats.psm1')
+$embed["$appData\\scripts\\modules\\updater.psm1"]   = (Join-Path $root 'scripts\modules\updater.psm1')
 $embed["$appData\\portal_autofill\\autofill_core.js"] = (Join-Path $root 'portal_autofill\autofill_core.js')
 $embed["$appData\\tasks\\install_autostart.ps1"]      = (Join-Path $root 'tasks\install_autostart.ps1')
 

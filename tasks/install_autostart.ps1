@@ -1,8 +1,5 @@
 param(
-    [ValidateSet('startup','logon')][string]$Mode='startup',
-    [int]$DelaySec=8,
-    [string]$User=(whoami),
-    [string]$Password
+    [string]$User=(whoami)
 )
 
 $ErrorActionPreference = 'SilentlyContinue'
@@ -47,46 +44,20 @@ $startScript = Join-Path $stable 'scripts\start_auth.ps1'
 if (-not (Test-Path $startScript)) { Write-Host 'start_auth.ps1 not found in stable directory' -ForegroundColor Red; exit 1 }
 
 $taskName = 'CampusPortalAutoConnect'
-$delay = $DelaySec
 
+# Create task action and trigger for user logon
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ("-WindowStyle Hidden -ExecutionPolicy Bypass -File `"{0}`"" -f $startScript)
-if ($Mode -eq 'startup') {
-    $trigger = New-ScheduledTaskTrigger -AtStartup
-    $trigger.Delay = ("PT{0}S" -f $delay)
-} else {
-    $trigger = New-ScheduledTaskTrigger -AtLogOn
-    $trigger.Delay = "PT1S"
-}
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+$trigger.Delay = "PT1S"  # 1 second delay after logon
 $principal = New-ScheduledTaskPrincipal -UserId $User -RunLevel Highest
 
 try {
-    # remove existing to switch principal/trigger reliably
+    # Remove existing task to ensure clean registration
     try { Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
-    if ($Mode -eq 'startup') {
-        if (-not $Password) { 
-            # 尝试从已保存的凭据中加载Windows密码
-            try {
-                Import-Module (Join-Path (Split-Path $root -Parent) 'scripts\modules\security.psm1') -Force -ErrorAction SilentlyContinue
-                $winCredId = 'CampusWindowsCredential'
-                $savedPassword = Load-Secret -Id $winCredId
-                if ($savedPassword -and ([string]$savedPassword).Length -gt 0) {
-                    $Password = [string]$savedPassword
-                    Write-Host "✅ Using saved Windows password from credential store" -ForegroundColor Green
-                } else {
-                    $Password = Read-Host -AsSecureString 'Enter your Windows password (for task registration)'
-                }
-            } catch {
-                $Password = Read-Host -AsSecureString 'Enter your Windows password (for task registration)'
-            }
-        }
-        $pass = if ($Password -is [securestring]) { $Password } else { (ConvertTo-SecureString -AsPlainText $Password -Force) }
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $User -Password $pass -RunLevel Highest -Force | Out-Null
-        Write-Host ("Task created: {0} (AtStartup, delay {1}s)" -f $taskName,$delay) -ForegroundColor Green
-    } else {
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
-        Write-Host ("Task created: {0} (AtLogOn, delay 1s)" -f $taskName) -ForegroundColor Green
-    }
+    # Register task for logon trigger
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+    Write-Host ("✅ Task created: {0} (AtLogOn, delay 1s)" -f $taskName) -ForegroundColor Green
 } catch {
-    Write-Host ("Failed to create scheduled task: {0}" -f $_.Exception.Message) -ForegroundColor Red
+    Write-Host ("❌ Failed to create scheduled task: {0}" -f $_.Exception.Message) -ForegroundColor Red
 }

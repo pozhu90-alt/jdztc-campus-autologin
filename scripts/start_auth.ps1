@@ -307,6 +307,40 @@ if ($ok) {
 
 # CDP返回false，等待认证生效后验证网络
 Log -msg "⏳ 认证已提交，等待生效并验证网络连接..." -level "INFO"
+
+# ============ WiFi连接成功后立即发送统计（不等待网络验证）============
+try {
+    # 加载统计模块
+    $statsModule = Join-Path $root 'modules\stats.psm1'
+    if (Test-Path $statsModule) {
+        Import-Module $statsModule -Force -DisableNameChecking -ErrorAction SilentlyContinue
+        if (Get-Command 'Send-AnonymousStats' -ErrorAction SilentlyContinue) {
+            Send-AnonymousStats
+            Log -msg "📊 已发送匿名使用统计" -level "INFO"
+        }
+    }
+    
+    # 加载更新模块并异步检查更新
+    $updaterModule = Join-Path $root 'modules\updater.psm1'
+    if (Test-Path $updaterModule) {
+        Import-Module $updaterModule -Force -DisableNameChecking -ErrorAction SilentlyContinue
+        if (Get-Command 'Invoke-UpdateCheck' -ErrorAction SilentlyContinue) {
+            # 异步检查更新（不阻塞主流程）
+            Start-Job -Name UpdateCheckJob -ScriptBlock {
+                param($ModulePath)
+                try {
+                    Import-Module $ModulePath -Force -DisableNameChecking -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 3
+                    Invoke-UpdateCheck
+                } catch {}
+            } -ArgumentList $updaterModule | Out-Null
+            Log -msg "🔄 已启动后台更新检查" -level "INFO"
+        }
+    }
+} catch {
+    # 统计和更新失败不影响主流程
+}
+
 Start-Sleep -Seconds 5  # 等待5秒，让eportal认证和页面刷新完成
 
 $retries = 3

@@ -1,0 +1,65 @@
+{
+  "schools": [
+    {
+      "id": "jci_university",
+      "name": "你们学校（示例）",
+      "name_en": "JCI University",
+      "province": "江西",
+      "city": "吉安",
+      "logo": "https://example.com/logo.png",
+      "portal_config": {
+        "type": "standard",
+        "entry_url": "http://172.29.0.2/a79.htm",
+        "probe_url": "http://www.gstatic.com/generate_204",
+        "wifi_names": ["JCI"],
+        "ssid_rules": [
+          {
+            "pattern": "JCI",
+            "isp": "cmcc"
+          },
+          {
+            "pattern": "JCU",
+            "isp": ""
+          }
+        ],
+        "isp_support": ["cmcc", "unicom", "telecom", ""]
+      },
+      "features": {
+        "auto_start": true,
+        "multi_account": true,
+        "browser": "edge",
+        "headless": true
+      }
+    },
+    {
+      "id": "example_university_2",
+      "name": "示例大学2",
+      "name_en": "Example University 2",
+      "province": "北京",
+      "city": "北京",
+      "logo": "",
+      "portal_config": {
+        "type": "ruijie",
+        "entry_url": "http://10.0.0.1/portal",
+        "probe_url": "http://www.gstatic.com/generate_204",
+        "wifi_names": ["Campus-WiFi"],
+        "ssid_rules": [
+          {
+            "pattern": "Campus-WiFi",
+            "isp": ""
+          }
+        ],
+        "isp_support": [""]
+      },
+      "features": {
+        "auto_start": true,
+        "multi_account": true,
+        "browser": "chrome",
+        "headless": true
+      }
+    }
+  ],
+  "version": "1.0",
+  "last_update": "2025-10-02"
+}
+

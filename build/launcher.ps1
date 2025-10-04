@@ -9,6 +9,7 @@ try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 $stable = Join-Path $env:APPDATA 'CampusNet'
 $gui = Join-Path $stable 'gui\config_gui.ps1'
 $auth = Join-Path $stable 'scripts\start_auth.ps1'
+$modulesPath = Join-Path $stable 'scripts\modules'
 
 # Initialize user config on first run: copy default to active config if missing
 $cfg = Join-Path $stable 'config.json'
@@ -16,6 +17,9 @@ $cfgDefault = Join-Path $stable 'config.default.json'
 if (-not (Test-Path $cfg) -and (Test-Path $cfgDefault)) {
     try { Copy-Item -LiteralPath $cfgDefault -Destination $cfg -Force -ErrorAction SilentlyContinue } catch {}
 }
+
+# 统计和更新检查已移至 start_auth.ps1 连网成功后执行
+# 这样可以确保在有网络的情况下才发送数据
 
 if (Test-Path $gui) {
     # Set environment variable to tell GUI script to skip admin check (exe already has admin rights)

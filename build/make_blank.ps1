@@ -13,6 +13,10 @@ if (-not (Test-Path $dist)) { New-Item -ItemType Directory -Path $dist | Out-Nul
 $appData = '%APPDATA%\CampusNet'
 $embed = @{}
 $embed["$appData\\gui\\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui.ps1')
+$embed["$appData\\gui\\avatar.png"]                  = (Join-Path $root 'dist\avatar.png')
+$embed["$appData\\gui\\minimize_avatar.png"]         = (Join-Path $root 'dist\minimize_avatar.png')
+$embed["$appData\\gui\\maximize_avatar.png"]         = (Join-Path $root 'dist\maximize_avatar.png')
+$embed["$appData\\gui\\close_avatar.png"]            = (Join-Path $root 'dist\close_avatar.png')
 $embed["$appData\\scripts\\start_auth.ps1"]          = (Join-Path $root 'scripts\start_auth.ps1')
 $embed["$appData\\scripts\\modules\\wifi.psm1"]     = (Join-Path $root 'scripts\modules\wifi.psm1')
 $embed["$appData\\scripts\\modules\\netdetect.psm1"] = (Join-Path $root 'scripts\modules\netdetect.psm1')

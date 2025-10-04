@@ -11,26 +11,6 @@
                        {
                            "isp":  "unicom",
                            "pattern":  "JCI"
-                       },
-                       {
-                           "isp":  "",
-                           "pattern":  "JCU"
-                       },
-                       {
-                           "isp":  "",
-                           "pattern":  "SXL*"
-                       },
-                       {
-                           "isp":  "",
-                           "pattern":  "LIB*"
-                       },
-                       {
-                           "isp":  "",
-                           "pattern":  "CAFE*"
-                       },
-                       {
-                           "isp":  "",
-                           "pattern":  "HALL*"
                        }
                    ],
     "test_url":  "http://www.baidu.com",
@@ -38,7 +18,5 @@
     "headless":  true,
     "autostart_delay_sec":  0.1,
     "log_file":  "campus_network.log",
-    "min_signal_percent":  40,
-    "autostart_enabled":  true,
-    "windows_credential_id":  "CampusWindowsCredential"
+    "min_signal_percent":  65
 }

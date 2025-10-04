@@ -50,99 +50,271 @@ $startScript = Join-Path $root 'scripts\start_auth.ps1'
 try { Import-Module (Join-Path $modulesPath 'security.psm1') -Force -DisableNameChecking -WarningAction SilentlyContinue -ErrorAction SilentlyContinue } catch {}
 try { Import-Module (Join-Path $modulesPath 'wifi.psm1') -Force -DisableNameChecking -WarningAction SilentlyContinue -ErrorAction SilentlyContinue } catch {}
 
+# ============ About Dialog Function ============
+function Show-AboutDialog {
+    $aboutWin = New-Object System.Windows.Window
+    $aboutWin.WindowStyle = 'None'
+    $aboutWin.AllowsTransparency = $true
+    $aboutWin.Background = 'Transparent'
+    $aboutWin.Width = 550
+    $aboutWin.Height = 600
+    $aboutWin.WindowStartupLocation = 'CenterScreen'
+    $aboutWin.ResizeMode = 'NoResize'
+    $aboutWin.Topmost = $true
+    
+    # 主边框
+    $aboutBorder = New-Object System.Windows.Controls.Border
+    $aboutBorder.CornerRadius = 15
+    $aboutBorder.Padding = '30'
+    $aboutBorder.Background = New-Object System.Windows.Media.LinearGradientBrush
+    $aboutBorder.Background.StartPoint = '0,0'
+    $aboutBorder.Background.EndPoint = '0,1'
+    $aboutBg1 = New-Object System.Windows.Media.GradientStop; $aboutBg1.Color = '#FFFFEFD5'; $aboutBg1.Offset = 0
+    $aboutBg2 = New-Object System.Windows.Media.GradientStop; $aboutBg2.Color = '#FFFFFFFF'; $aboutBg2.Offset = 0.5
+    $aboutBg3 = New-Object System.Windows.Media.GradientStop; $aboutBg3.Color = '#FFF5F5FF'; $aboutBg3.Offset = 1
+    $aboutBorder.Background.GradientStops.Add($aboutBg1)
+    $aboutBorder.Background.GradientStops.Add($aboutBg2)
+    $aboutBorder.Background.GradientStops.Add($aboutBg3)
+    $aboutBorder.Effect = New-Object System.Windows.Media.Effects.DropShadowEffect
+    $aboutBorder.Effect.BlurRadius = 25
+    $aboutBorder.Effect.ShadowDepth = 5
+    $aboutBorder.Effect.Opacity = 0.3
+    
+    $aboutStack = New-Object System.Windows.Controls.StackPanel
+    
+    # 标题
+    $aboutTitle = New-Object System.Windows.Controls.TextBlock
+    $aboutTitle.Text = "🌸 关于小瓷连网"
+    $aboutTitle.FontSize = 24
+    $aboutTitle.FontWeight = 'Bold'
+    $aboutTitle.Foreground = '#FF6B4423'
+    $aboutTitle.TextAlignment = 'Center'
+    $aboutTitle.Margin = '0,0,0,20'
+    [void]$aboutStack.Children.Add($aboutTitle)
+    
+    # 版本信息
+    $versionText = New-Object System.Windows.Controls.TextBlock
+    $versionText.Text = "版本 1.0.0"
+    $versionText.FontSize = 14
+    $versionText.Foreground = '#FF8B7355'
+    $versionText.TextAlignment = 'Center'
+    $versionText.Margin = '0,0,0,25'
+    [void]$aboutStack.Children.Add($versionText)
+    
+    # 分隔线
+    $separator1 = New-Object System.Windows.Controls.Border
+    $separator1.Height = 2
+    $separator1.Background = '#FFFFD9A8'
+    $separator1.Margin = '0,0,0,20'
+    $separator1.Opacity = 0.5
+    [void]$aboutStack.Children.Add($separator1)
+    
+    # 隐私说明标题
+    $privacyTitle = New-Object System.Windows.Controls.TextBlock
+    $privacyTitle.Text = "📋 使用说明"
+    $privacyTitle.FontSize = 16
+    $privacyTitle.FontWeight = 'Bold'
+    $privacyTitle.Foreground = '#FF2C3E50'
+    $privacyTitle.Margin = '0,0,0,15'
+    [void]$aboutStack.Children.Add($privacyTitle)
+    
+    # 隐私说明内容
+    $privacyContent = @"
+本工具会收集以下匿名信息用于改进服务：
+
+✅ 我们收集的信息：
+  • 匿名设备标识（无法关联到个人）
+  • 程序版本号
+  • 使用时间统计
+  • 操作系统版本
+
+❌ 我们不会收集：
+  • 用户名、密码
+  • 上网记录
+  • 任何个人身份信息
+  • IP地址或位置信息
+
+🔒 数据安全承诺：
+  • 所有数据完全匿名化
+  • 仅用于统计分析和改进工具
+  • 不会与第三方分享
+  • 数据保留期限：3个月
+
+💡 更新检查：
+  • 自动检查新版本
+  • 发现更新时会提醒您
+  • 您可以自主选择是否更新
+"@
+    
+    $privacyScroll = New-Object System.Windows.Controls.ScrollViewer
+    $privacyScroll.MaxHeight = 280
+    $privacyScroll.VerticalScrollBarVisibility = 'Auto'
+    $privacyScroll.Margin = '0,0,0,20'
+    
+    $privacyText = New-Object System.Windows.Controls.TextBlock
+    $privacyText.Text = $privacyContent
+    $privacyText.FontSize = 12
+    $privacyText.Foreground = '#FF5D6D7E'
+    $privacyText.TextWrapping = 'Wrap'
+    $privacyText.LineHeight = 20
+    $privacyText.Padding = '10'
+    $privacyScroll.Content = $privacyText
+    [void]$aboutStack.Children.Add($privacyScroll)
+    
+    # 分隔线
+    $separator2 = New-Object System.Windows.Controls.Border
+    $separator2.Height = 2
+    $separator2.Background = '#FFFFD9A8'
+    $separator2.Margin = '0,0,0,20'
+    $separator2.Opacity = 0.5
+    [void]$aboutStack.Children.Add($separator2)
+    
+    # 版权信息
+    $copyrightText = New-Object System.Windows.Controls.TextBlock
+    $copyrightText.Text = "© 2025 小瓷连网 - 让连网更简单"
+    $copyrightText.FontSize = 11
+    $copyrightText.Foreground = '#FF95A5A6'
+    $copyrightText.TextAlignment = 'Center'
+    $copyrightText.Margin = '0,0,0,15'
+    [void]$aboutStack.Children.Add($copyrightText)
+    
+    # 关闭按钮
+    $closeBtn = New-Object System.Windows.Controls.Button
+    $closeBtn.Content = "我知道了"
+    $closeBtn.Width = 120
+    $closeBtn.Height = 36
+    $closeBtn.FontSize = 14
+    $closeBtn.FontWeight = 'Bold'
+    $closeBtn.Foreground = 'White'
+    $closeBtn.Background = New-Object System.Windows.Media.LinearGradientBrush
+    $closeBtn.Background.StartPoint = '0,0'
+    $closeBtn.Background.EndPoint = '0,1'
+    $closeBg1 = New-Object System.Windows.Media.GradientStop; $closeBg1.Color = '#FFFF9A76'; $closeBg1.Offset = 0
+    $closeBg2 = New-Object System.Windows.Media.GradientStop; $closeBg2.Color = '#FFFF6B9D'; $closeBg2.Offset = 1
+    $closeBtn.Background.GradientStops.Add($closeBg1)
+    $closeBtn.Background.GradientStops.Add($closeBg2)
+    $closeBtn.BorderThickness = 0
+    $closeBtn.Cursor = 'Hand'
+    $closeBtn.HorizontalAlignment = 'Center'
+    $closeBtn.Add_Click({ $aboutWin.Close() })
+    [void]$aboutStack.Children.Add($closeBtn)
+    
+    $aboutBorder.Child = $aboutStack
+    $aboutWin.Content = $aboutBorder
+    
+    [void]$aboutWin.ShowDialog()
+}
+
 # Custom styled message box functions
 function Show-CustomDialog {
     param(
         [string]$Message,
         [string]$Title = '',
         [string]$Type = 'Info',  # Info, Error, Warning, Question
-        [bool]$ShowCancel = $false,
-        [string]$DecorativeText = ''  # 装饰性文字，用于显示在右上角
+        [bool]$ShowCancel = $false
     )
     
     $dialogWin = New-Object System.Windows.Window
     $dialogWin.WindowStyle = 'None'
     $dialogWin.AllowsTransparency = $true
     $dialogWin.Background = 'Transparent'
-    $dialogWin.Width = 480
+    $dialogWin.Width = 500
     $dialogWin.SizeToContent = 'Height'
     $dialogWin.WindowStartupLocation = 'CenterScreen'
     $dialogWin.ResizeMode = 'NoResize'
     $dialogWin.Topmost = $true
     
-    # Main border with shadow
+    # Main border with shadow - 高级渐变设计
     $border = New-Object System.Windows.Controls.Border
-    $border.CornerRadius = 16
-    $border.Background = '#FFFFFFFF'
+    $border.CornerRadius = 12
     $border.Padding = '0'
-    $border.Effect = New-Object System.Windows.Media.Effects.DropShadowEffect
-    $border.Effect.BlurRadius = 30
-    $border.Effect.ShadowDepth = 0
-    $border.Effect.Opacity = 0.25
-    $border.Effect.Color = '#FF000000'
     
-    $mainStack = New-Object System.Windows.Controls.StackPanel
-    
-    # Header with gradient based on type
-    $header = New-Object System.Windows.Controls.Border
-    $header.Height = 8
-    $header.CornerRadius = '16,16,0,0'
-    $headerBrush = New-Object System.Windows.Media.LinearGradientBrush
-    $headerBrush.StartPoint = '0,0'
-    $headerBrush.EndPoint = '1,0'
+    # 根据类型创建明显且优雅的渐变背景
+    $bgBrush = New-Object System.Windows.Media.LinearGradientBrush
+    $bgBrush.StartPoint = '0,0'
+    $bgBrush.EndPoint = '0,1'
     
     switch ($Type) {
         'Info' {
-            $hs1 = New-Object System.Windows.Media.GradientStop; $hs1.Color = '#FF42A5F5'; $hs1.Offset = 0
-            $hs2 = New-Object System.Windows.Media.GradientStop; $hs2.Color = '#FF26C6DA'; $hs2.Offset = 1
+            # 清新蓝色渐变 - 从浅蓝到白色
+            $bg1 = New-Object System.Windows.Media.GradientStop; $bg1.Color = '#FFD6E9FF'; $bg1.Offset = 0
+            $bg2 = New-Object System.Windows.Media.GradientStop; $bg2.Color = '#FFE8F3FF'; $bg2.Offset = 0.35
+            $bg3 = New-Object System.Windows.Media.GradientStop; $bg3.Color = '#FFF5FAFF'; $bg3.Offset = 0.65
+            $bg4 = New-Object System.Windows.Media.GradientStop; $bg4.Color = '#FFFFFFFF'; $bg4.Offset = 1
         }
         'Error' {
-            $hs1 = New-Object System.Windows.Media.GradientStop; $hs1.Color = '#FFEF5350'; $hs1.Offset = 0
-            $hs2 = New-Object System.Windows.Media.GradientStop; $hs2.Color = '#FFFF7043'; $hs2.Offset = 1
+            # 柔和红色渐变 - 从浅红到白色
+            $bg1 = New-Object System.Windows.Media.GradientStop; $bg1.Color = '#FFFFD6D6'; $bg1.Offset = 0
+            $bg2 = New-Object System.Windows.Media.GradientStop; $bg2.Color = '#FFFFE8E8'; $bg2.Offset = 0.35
+            $bg3 = New-Object System.Windows.Media.GradientStop; $bg3.Color = '#FFFFF5F5'; $bg3.Offset = 0.65
+            $bg4 = New-Object System.Windows.Media.GradientStop; $bg4.Color = '#FFFFFFFF'; $bg4.Offset = 1
         }
         'Warning' {
-            $hs1 = New-Object System.Windows.Media.GradientStop; $hs1.Color = '#FFFFA726'; $hs1.Offset = 0
-            $hs2 = New-Object System.Windows.Media.GradientStop; $hs2.Color = '#FFFFCA28'; $hs2.Offset = 1
+            # 温暖橙黄渐变 - 从浅橙到白色
+            $bg1 = New-Object System.Windows.Media.GradientStop; $bg1.Color = '#FFFFE8CC'; $bg1.Offset = 0
+            $bg2 = New-Object System.Windows.Media.GradientStop; $bg2.Color = '#FFFFF0DD'; $bg2.Offset = 0.35
+            $bg3 = New-Object System.Windows.Media.GradientStop; $bg3.Color = '#FFFFF8EE'; $bg3.Offset = 0.65
+            $bg4 = New-Object System.Windows.Media.GradientStop; $bg4.Color = '#FFFFFFFF'; $bg4.Offset = 1
         }
         'Question' {
-            $hs1 = New-Object System.Windows.Media.GradientStop; $hs1.Color = '#FFFFBF66'; $hs1.Offset = 0
-            $hs2 = New-Object System.Windows.Media.GradientStop; $hs2.Color = '#FFFFD180'; $hs2.Offset = 1
+            # 优雅紫色渐变 - 从浅紫到白色
+            $bg1 = New-Object System.Windows.Media.GradientStop; $bg1.Color = '#FFE8DCFF'; $bg1.Offset = 0
+            $bg2 = New-Object System.Windows.Media.GradientStop; $bg2.Color = '#FFF0E8FF'; $bg2.Offset = 0.35
+            $bg3 = New-Object System.Windows.Media.GradientStop; $bg3.Color = '#FFF8F3FF'; $bg3.Offset = 0.65
+            $bg4 = New-Object System.Windows.Media.GradientStop; $bg4.Color = '#FFFFFFFF'; $bg4.Offset = 1
         }
     }
-    $headerBrush.GradientStops.Add($hs1)
-    $headerBrush.GradientStops.Add($hs2)
-    $header.Background = $headerBrush
-    [void]$mainStack.Children.Add($header)
+    $bgBrush.GradientStops.Add($bg1)
+    $bgBrush.GradientStops.Add($bg2)
+    $bgBrush.GradientStops.Add($bg3)
+    $bgBrush.GradientStops.Add($bg4)
+    $border.Background = $bgBrush
     
-    # Content area
+    $border.Effect = New-Object System.Windows.Media.Effects.DropShadowEffect
+    $border.Effect.BlurRadius = 35
+    $border.Effect.ShadowDepth = 0
+    $border.Effect.Opacity = 0.20
+    $border.Effect.Color = '#FF000000'
+    
+    # 添加拖动功能
+    $border.Add_MouseLeftButtonDown({
+        param($s, $e)
+        try { $dialogWin.DragMove() } catch {}
+    })
+    $border.Cursor = 'Hand'
+    
+    $mainStack = New-Object System.Windows.Controls.StackPanel
+    
+    # Content area - 更宽敞的间距
     $contentStack = New-Object System.Windows.Controls.StackPanel
-    $contentStack.Margin = '40,30,40,30'
+    $contentStack.Margin = '35,35,35,28'
     
-    # Icon and Title row
+    # Icon and Title row - 现代化设计
     if ($Title) {
         $titlePanel = New-Object System.Windows.Controls.StackPanel
         $titlePanel.Orientation = 'Horizontal'
-        $titlePanel.Margin = '0,0,0,20'
+        $titlePanel.Margin = '0,0,0,18'
         
-        # Icon
+        # 精致图标
         $iconText = New-Object System.Windows.Controls.TextBlock
-        $iconText.FontSize = 28
+        $iconText.FontSize = 24
         $iconText.Margin = '0,0,12,0'
         $iconText.VerticalAlignment = 'Center'
+        $iconText.FontWeight = 'Bold'
         
         switch ($Type) {
-            'Info' { $iconText.Text = '✓'; $iconText.Foreground = '#FF42A5F5' }
-            'Error' { $iconText.Text = '✕'; $iconText.Foreground = '#FFEF5350' }
-            'Warning' { $iconText.Text = '⚠'; $iconText.Foreground = '#FFFFA726' }
-            'Question' { $iconText.Text = '?'; $iconText.Foreground = '#FFFFBF66' }
+            'Info' { $iconText.Text = '✓'; $iconText.Foreground = '#FF4A90E2' }
+            'Error' { $iconText.Text = '✕'; $iconText.Foreground = '#FFE74C3C' }
+            'Warning' { $iconText.Text = '⚠'; $iconText.Foreground = '#FFF39C12' }
+            'Question' { $iconText.Text = '?'; $iconText.Foreground = '#FF9B59B6' }
         }
         [void]$titlePanel.Children.Add($iconText)
         
-        # Title text
+        # 标题文字 - 简洁专业
         $titleText = New-Object System.Windows.Controls.TextBlock
         $titleText.Text = $Title
-        $titleText.FontSize = 18
-        $titleText.FontWeight = 'Bold'
+        $titleText.FontSize = 17
+        $titleText.FontWeight = 'SemiBold'
         $titleText.Foreground = '#FF2C3E50'
         $titleText.VerticalAlignment = 'Center'
         [void]$titlePanel.Children.Add($titleText)
@@ -150,47 +322,51 @@ function Show-CustomDialog {
         [void]$contentStack.Children.Add($titlePanel)
     }
     
-    # Message
+    # Message - 高级排版
     $msgText = New-Object System.Windows.Controls.TextBlock
     $msgText.Text = $Message
     $msgText.TextWrapping = 'Wrap'
-    $msgText.FontSize = 13
-    $msgText.Foreground = '#FF5F6368'
-    $msgText.LineHeight = 22
-    $msgText.Margin = '0,0,0,30'
+    $msgText.FontSize = 13.5
+    $msgText.Foreground = '#FF596066'
+    $msgText.LineHeight = 24
+    $msgText.Margin = '0,0,0,28'
+    $msgText.FontFamily = 'Microsoft YaHei UI, Segoe UI'
     [void]$contentStack.Children.Add($msgText)
     
-    # Buttons
+    # Buttons - 现代化设计
     $btnPanel = New-Object System.Windows.Controls.StackPanel
     $btnPanel.Orientation = 'Horizontal'
     $btnPanel.HorizontalAlignment = 'Right'
     
-    # Rounded corners template (shared by all buttons)
+    # 圆角按钮模板
     $buttonTemplate = @"
 <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" TargetType="Button">
     <Border Background="{TemplateBinding Background}" 
             BorderBrush="{TemplateBinding BorderBrush}" 
             BorderThickness="{TemplateBinding BorderThickness}" 
-            CornerRadius="8">
+            CornerRadius="6">
         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
     </Border>
 </ControlTemplate>
 "@
     
     if ($ShowCancel) {
-        # Cancel button
+        # 取消按钮 - 简洁设计
         $btnNo = New-Object System.Windows.Controls.Button
-        $btnNo.Content = if ($Type -eq 'Question') { (CS @(0x5426,0x0028,0x004E,0x0029)) } else { (CS @(0x53D6,0x6D88)) }
-        $btnNo.Width = 90
-        $btnNo.Height = 36
+        $btnNo.Content = if ($Type -eq 'Question') { '取消' } else { '取消' }
+        $btnNo.Width = 88
+        $btnNo.Height = 38
         $btnNo.Margin = '0,0,10,0'
-        $btnNo.FontSize = 12
-        $btnNo.Background = '#FFF5F5F5'
-        $btnNo.Foreground = '#FF90A4AE'
-        $btnNo.BorderBrush = '#FFE0E0E0'
-        $btnNo.BorderThickness = '1.5'
+        $btnNo.FontSize = 13
+        $btnNo.Background = '#FFF8F9FA'
+        $btnNo.Foreground = '#FF7F8C8D'
+        $btnNo.BorderBrush = '#FFDFE4E8'
+        $btnNo.BorderThickness = '1'
         $btnNo.Cursor = 'Hand'
+        $btnNo.FontFamily = 'Microsoft YaHei UI'
         $btnNo.Template = [System.Windows.Markup.XamlReader]::Parse($buttonTemplate)
+        $btnNo.Add_MouseEnter({ $this.Background = '#FFF0F2F5' })
+        $btnNo.Add_MouseLeave({ $this.Background = '#FFF8F9FA' })
         $btnNo.Add_Click({
             $dialogWin.Tag = $false
             $dialogWin.Close()
@@ -198,43 +374,41 @@ function Show-CustomDialog {
         [void]$btnPanel.Children.Add($btnNo)
     }
     
-    # OK/Yes button
+    # 确认按钮 - 高级配色
     $btnYes = New-Object System.Windows.Controls.Button
-    $btnYes.Content = if ($ShowCancel -and $Type -eq 'Question') { (CS @(0x662F,0x0028,0x0059,0x0029)) } else { (CS @(0x786E,0x5B9A)) }
-    $btnYes.Width = 90
-    $btnYes.Height = 36
-    $btnYes.FontSize = 12
-    $btnYes.FontWeight = 'Bold'
+    $btnYes.Content = if ($ShowCancel -and $Type -eq 'Question') { '确认' } else { '确认' }
+    $btnYes.Width = 88
+    $btnYes.Height = 38
+    $btnYes.FontSize = 13
+    $btnYes.FontWeight = 'Medium'
     $btnYes.Foreground = '#FFFFFFFF'
     $btnYes.BorderThickness = 0
     $btnYes.Cursor = 'Hand'
+    $btnYes.FontFamily = 'Microsoft YaHei UI'
     
-    # Gradient background
-    $yesBrush = New-Object System.Windows.Media.LinearGradientBrush
-    $yesBrush.StartPoint = '0,0'
-    $yesBrush.EndPoint = '1,0'
-    
+    # 根据类型设置按钮颜色 - 纯色更高级
     switch ($Type) {
-        'Info' {
-            $ys1 = New-Object System.Windows.Media.GradientStop; $ys1.Color = '#FF42A5F5'; $ys1.Offset = 0
-            $ys2 = New-Object System.Windows.Media.GradientStop; $ys2.Color = '#FF26C6DA'; $ys2.Offset = 1
+        'Info' { 
+            $btnYes.Background = '#FF4A90E2'
+            $btnYes.Add_MouseEnter({ $this.Background = '#FF3A80D2' })
+            $btnYes.Add_MouseLeave({ $this.Background = '#FF4A90E2' })
         }
-        'Error' {
-            $ys1 = New-Object System.Windows.Media.GradientStop; $ys1.Color = '#FFEF5350'; $ys1.Offset = 0
-            $ys2 = New-Object System.Windows.Media.GradientStop; $ys2.Color = '#FFFF7043'; $ys2.Offset = 1
+        'Error' { 
+            $btnYes.Background = '#FFE74C3C'
+            $btnYes.Add_MouseEnter({ $this.Background = '#FFD73C2C' })
+            $btnYes.Add_MouseLeave({ $this.Background = '#FFE74C3C' })
         }
-        'Warning' {
-            $ys1 = New-Object System.Windows.Media.GradientStop; $ys1.Color = '#FFFFA726'; $ys1.Offset = 0
-            $ys2 = New-Object System.Windows.Media.GradientStop; $ys2.Color = '#FFFFCA28'; $ys2.Offset = 1
+        'Warning' { 
+            $btnYes.Background = '#FFF39C12'
+            $btnYes.Add_MouseEnter({ $this.Background = '#FFE38C02' })
+            $btnYes.Add_MouseLeave({ $this.Background = '#FFF39C12' })
         }
-        'Question' {
-            $ys1 = New-Object System.Windows.Media.GradientStop; $ys1.Color = '#FFFFBF66'; $ys1.Offset = 0
-            $ys2 = New-Object System.Windows.Media.GradientStop; $ys2.Color = '#FFFFD180'; $ys2.Offset = 1
+        'Question' { 
+            $btnYes.Background = '#FF9B59B6'
+            $btnYes.Add_MouseEnter({ $this.Background = '#FF8B49A6' })
+            $btnYes.Add_MouseLeave({ $this.Background = '#FF9B59B6' })
         }
     }
-    $yesBrush.GradientStops.Add($ys1)
-    $yesBrush.GradientStops.Add($ys2)
-    $btnYes.Background = $yesBrush
     
     $btnYes.Template = [System.Windows.Markup.XamlReader]::Parse($buttonTemplate)
     $btnYes.Add_Click({
@@ -248,73 +422,47 @@ function Show-CustomDialog {
     
     $border.Child = $mainStack
     
-    # Close button (X) at top right
+    # Close button (X) at top right - 简洁设计
     $closeBtn = New-Object System.Windows.Controls.Button
     $closeBtn.Content = '×'
-    $closeBtn.Width = 32
-    $closeBtn.Height = 32
-    $closeBtn.FontSize = 20
-    $closeBtn.FontWeight = 'Bold'
+    $closeBtn.Width = 30
+    $closeBtn.Height = 30
+    $closeBtn.FontSize = 18
+    $closeBtn.FontWeight = 'Normal'
     $closeBtn.Background = 'Transparent'
-    $closeBtn.Foreground = '#FF90A4AE'
+    $closeBtn.Foreground = '#FFB0B8BF'
     $closeBtn.BorderThickness = 0
     $closeBtn.Cursor = 'Hand'
     $closeBtn.HorizontalAlignment = 'Right'
     $closeBtn.VerticalAlignment = 'Top'
-    $closeBtn.Margin = '0,10,10,0'
+    $closeBtn.Margin = '0,8,8,0'
     
     $closeTemplate = @"
 <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" TargetType="Button">
-    <Border Background="{TemplateBinding Background}" CornerRadius="16">
+    <Border Background="{TemplateBinding Background}" CornerRadius="15">
         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
     </Border>
 </ControlTemplate>
 "@
     $closeBtn.Template = [System.Windows.Markup.XamlReader]::Parse($closeTemplate)
-    $closeBtn.Add_MouseEnter({ $closeBtn.Foreground = '#FFEF5350' })
-    $closeBtn.Add_MouseLeave({ $closeBtn.Foreground = '#FF90A4AE' })
+    $closeBtn.Add_MouseEnter({ 
+        $this.Foreground = '#FFE74C3C'
+        $this.Background = '#FFF8F9FA'
+    })
+    $closeBtn.Add_MouseLeave({ 
+        $this.Foreground = '#FFB0B8BF'
+        $this.Background = 'Transparent'
+    })
     $closeBtn.Add_Click({
         $dialogWin.Tag = $false
         $dialogWin.Close()
     })
     
-    # Overlay close button on top of content using Grid
+    # 使用Grid布局
     $overlayGrid = New-Object System.Windows.Controls.Grid
     [void]$overlayGrid.Children.Add($border)
+    [System.Windows.Controls.Panel]::SetZIndex($closeBtn, 99)
     [void]$overlayGrid.Children.Add($closeBtn)
-    
-    # Add decorative text if provided (rotated 45 degrees)
-    if ($DecorativeText) {
-        $decorativeTextBlock = New-Object System.Windows.Controls.TextBlock
-        $decorativeTextBlock.Text = $DecorativeText
-        $decorativeTextBlock.FontSize = 14
-        $decorativeTextBlock.FontWeight = 'Bold'
-        
-        # Set color based on dialog type
-        switch ($Type) {
-            'Info' { $decorativeTextBlock.Foreground = '#FF42A5F5' }
-            'Error' { $decorativeTextBlock.Foreground = '#FFEF5350' }
-            'Warning' { $decorativeTextBlock.Foreground = '#FFFFA726' }
-            'Question' { $decorativeTextBlock.Foreground = '#FFD4A574' }
-        }
-        
-        $decorativeTextBlock.HorizontalAlignment = 'Right'
-        $decorativeTextBlock.VerticalAlignment = 'Top'
-        $decorativeTextBlock.Margin = '0,85,60,0'
-        $decorativeTextBlock.Opacity = 0.88
-        
-        # Apply rotation transform (30 degrees clockwise)
-        $rotateTransform = New-Object System.Windows.Media.RotateTransform
-        $rotateTransform.Angle = 30
-        $decorativeTextBlock.RenderTransform = $rotateTransform
-        $decorativeTextBlock.RenderTransformOrigin = '0.5,0.5'
-        
-        # Set high ZIndex to ensure it's above everything except close button
-        [System.Windows.Controls.Panel]::SetZIndex($decorativeTextBlock, 98)
-        [System.Windows.Controls.Panel]::SetZIndex($closeBtn, 99)
-        
-        [void]$overlayGrid.Children.Add($decorativeTextBlock)
-    }
     
     $dialogWin.Content = $overlayGrid
     
@@ -323,16 +471,16 @@ function Show-CustomDialog {
     return $dialogWin.Tag
 }
 
-function Show-Info([string]$msg, [string]$title = '', [string]$decorative = '') { 
-    [void](Show-CustomDialog -Message $msg -Title $title -Type 'Info' -DecorativeText $decorative)
+function Show-Info([string]$msg, [string]$title = '') { 
+    [void](Show-CustomDialog -Message $msg -Title $title -Type 'Info')
 }
 
-function Show-Error([string]$msg, [string]$title = '', [string]$decorative = '') { 
-    [void](Show-CustomDialog -Message $msg -Title $title -Type 'Error' -DecorativeText $decorative)
+function Show-Error([string]$msg, [string]$title = '') { 
+    [void](Show-CustomDialog -Message $msg -Title $title -Type 'Error')
 }
 
-function Show-Question([string]$msg, [string]$title = '', [string]$decorative = '') {
-    return (Show-CustomDialog -Message $msg -Title $title -Type 'Question' -ShowCancel $true -DecorativeText $decorative)
+function Show-Question([string]$msg, [string]$title = '') {
+    return (Show-CustomDialog -Message $msg -Title $title -Type 'Question' -ShowCancel $true)
 }
 
 Add-Type -AssemblyName PresentationFramework | Out-Null
@@ -363,12 +511,17 @@ $window.MinHeight = 600
 $mainBorder = New-Object System.Windows.Controls.Border
 $mainBorder.CornerRadius = '24'
 $mainBorder.Background = New-Object System.Windows.Media.LinearGradientBrush
-$mainBorder.Background.StartPoint = '0,0'
-$mainBorder.Background.EndPoint = '1,1'
-$stop1 = New-Object System.Windows.Media.GradientStop; $stop1.Color = '#FFFFF9F0'; $stop1.Offset = 0
-$stop2 = New-Object System.Windows.Media.GradientStop; $stop2.Color = '#FFFFF0E6'; $stop2.Offset = 1
+$mainBorder.Background.StartPoint = '0,0.5'
+$mainBorder.Background.EndPoint = '1,0.5'
+# 水平渐变 - 从左到右，配合整体渐变效果
+$stop1 = New-Object System.Windows.Media.GradientStop; $stop1.Color = '#FFFFFBF5'; $stop1.Offset = 0
+$stop2 = New-Object System.Windows.Media.GradientStop; $stop2.Color = '#FFFFFDF8'; $stop2.Offset = 0.35
+$stop3 = New-Object System.Windows.Media.GradientStop; $stop3.Color = '#FFFFFEFB'; $stop3.Offset = 0.65
+$stop4 = New-Object System.Windows.Media.GradientStop; $stop4.Color = '#FFFFFFFF'; $stop4.Offset = 1
 $mainBorder.Background.GradientStops.Add($stop1)
 $mainBorder.Background.GradientStops.Add($stop2)
+$mainBorder.Background.GradientStops.Add($stop3)
+$mainBorder.Background.GradientStops.Add($stop4)
 $mainBorder.Effect = New-Object System.Windows.Media.Effects.DropShadowEffect
 $mainBorder.Effect.BlurRadius = 40
 $mainBorder.Effect.ShadowDepth = 0
@@ -388,12 +541,17 @@ $leftPanel.CornerRadius = '24,0,0,24'
 $leftPanel.Background = New-Object System.Windows.Media.LinearGradientBrush
 $leftPanel.Background.StartPoint = '0,0'
 $leftPanel.Background.EndPoint = '0,1'
-$lgStop1 = New-Object System.Windows.Media.GradientStop; $lgStop1.Color = '#FFFFE8B8'; $lgStop1.Offset = 0
-$lgStop2 = New-Object System.Windows.Media.GradientStop; $lgStop2.Color = '#FFFFD68F'; $lgStop2.Offset = 0.5
-$lgStop3 = New-Object System.Windows.Media.GradientStop; $lgStop3.Color = '#FFFFC570'; $lgStop3.Offset = 1
+# 深金黄色垂直渐变 - 丝滑过渡
+$lgStop1 = New-Object System.Windows.Media.GradientStop; $lgStop1.Color = '#FFFFCC80'; $lgStop1.Offset = 0
+$lgStop2 = New-Object System.Windows.Media.GradientStop; $lgStop2.Color = '#FFFFD090'; $lgStop2.Offset = 0.25
+$lgStop3 = New-Object System.Windows.Media.GradientStop; $lgStop3.Color = '#FFFFD498'; $lgStop3.Offset = 0.50
+$lgStop4 = New-Object System.Windows.Media.GradientStop; $lgStop4.Color = '#FFFFD8A0'; $lgStop4.Offset = 0.75
+$lgStop5 = New-Object System.Windows.Media.GradientStop; $lgStop5.Color = '#FFFFDCA8'; $lgStop5.Offset = 1
 $leftPanel.Background.GradientStops.Add($lgStop1)
 $leftPanel.Background.GradientStops.Add($lgStop2)
 $leftPanel.Background.GradientStops.Add($lgStop3)
+$leftPanel.Background.GradientStops.Add($lgStop4)
+$leftPanel.Background.GradientStops.Add($lgStop5)
 [System.Windows.Controls.Grid]::SetColumn($leftPanel,0)
 [void]$grid.Children.Add($leftPanel)
 
@@ -498,23 +656,28 @@ $leftPanel.Child = $leftStack
 
 # ============ GRADIENT TRANSITION LAYER ============
 $gradientLayer = New-Object System.Windows.Controls.Border
-$gradientLayer.Width = 220
+$gradientLayer.Width = 320
 $gradientLayer.HorizontalAlignment = 'Left'
 $gradientLayer.Background = New-Object System.Windows.Media.LinearGradientBrush
 $gradientLayer.Background.StartPoint = '0,0'
 $gradientLayer.Background.EndPoint = '1,0'
-$gStop1 = New-Object System.Windows.Media.GradientStop; $gStop1.Color = '#FFFFC570'; $gStop1.Offset = 0
-$gStop2 = New-Object System.Windows.Media.GradientStop; $gStop2.Color = '#FFFFD99A'; $gStop2.Offset = 0.2
-$gStop3 = New-Object System.Windows.Media.GradientStop; $gStop3.Color = '#FFFFE8C4'; $gStop3.Offset = 0.4
-$gStop4 = New-Object System.Windows.Media.GradientStop; $gStop4.Color = '#FFFFF3DC'; $gStop4.Offset = 0.6
-$gStop5 = New-Object System.Windows.Media.GradientStop; $gStop5.Color = '#FFFFF8ED'; $gStop5.Offset = 0.8
-$gStop6 = New-Object System.Windows.Media.GradientStop; $gStop6.Color = '#FFFFF9F0'; $gStop6.Offset = 1
+# 丝滑的水平渐变过渡 - 从深金黄到纯白
+$gStop1 = New-Object System.Windows.Media.GradientStop; $gStop1.Color = '#FFFFDCA8'; $gStop1.Offset = 0
+$gStop2 = New-Object System.Windows.Media.GradientStop; $gStop2.Color = '#FFFFE4B8'; $gStop2.Offset = 0.15
+$gStop3 = New-Object System.Windows.Media.GradientStop; $gStop3.Color = '#FFFFECC8'; $gStop3.Offset = 0.30
+$gStop4 = New-Object System.Windows.Media.GradientStop; $gStop4.Color = '#FFFFF2D8'; $gStop4.Offset = 0.45
+$gStop5 = New-Object System.Windows.Media.GradientStop; $gStop5.Color = '#FFFFF6E5'; $gStop5.Offset = 0.60
+$gStop6 = New-Object System.Windows.Media.GradientStop; $gStop6.Color = '#FFFFFAEF'; $gStop6.Offset = 0.75
+$gStop7 = New-Object System.Windows.Media.GradientStop; $gStop7.Color = '#FFFFFDF8'; $gStop7.Offset = 0.90
+$gStop8 = New-Object System.Windows.Media.GradientStop; $gStop8.Color = '#FFFFFFFF'; $gStop8.Offset = 1
 $gradientLayer.Background.GradientStops.Add($gStop1)
 $gradientLayer.Background.GradientStops.Add($gStop2)
 $gradientLayer.Background.GradientStops.Add($gStop3)
 $gradientLayer.Background.GradientStops.Add($gStop4)
 $gradientLayer.Background.GradientStops.Add($gStop5)
 $gradientLayer.Background.GradientStops.Add($gStop6)
+$gradientLayer.Background.GradientStops.Add($gStop7)
+$gradientLayer.Background.GradientStops.Add($gStop8)
 [System.Windows.Controls.Grid]::SetColumn($gradientLayer,1)
 $gradientLayer.IsHitTestVisible = $false
 [void]$grid.Children.Add($gradientLayer)
@@ -523,6 +686,63 @@ $gradientLayer.IsHitTestVisible = $false
 $rightPanel = New-Object System.Windows.Controls.Grid
 [System.Windows.Controls.Grid]::SetColumn($rightPanel,1)
 [void]$grid.Children.Add($rightPanel)
+
+# ============ ABOUT BUTTON (Top Left) ============
+$aboutButton = New-Object System.Windows.Controls.Button
+$aboutButton.Width = 80
+$aboutButton.Height = 32
+$aboutButton.HorizontalAlignment = 'Left'
+$aboutButton.VerticalAlignment = 'Top'
+$aboutButton.Margin = '20,18,0,0'
+$aboutButton.Content = "ℹ 关于"
+$aboutButton.FontSize = 13
+$aboutButton.FontWeight = 'SemiBold'
+$aboutButton.Foreground = '#FF6B4423'
+$aboutButton.Background = New-Object System.Windows.Media.LinearGradientBrush
+$aboutButton.Background.StartPoint = '0,0'
+$aboutButton.Background.EndPoint = '0,1'
+$abg1 = New-Object System.Windows.Media.GradientStop; $abg1.Color = '#FFFFEFD5'; $abg1.Offset = 0
+$abg2 = New-Object System.Windows.Media.GradientStop; $abg2.Color = '#FFFFD9A8'; $abg2.Offset = 1
+$aboutButton.Background.GradientStops.Add($abg1)
+$aboutButton.Background.GradientStops.Add($abg2)
+$aboutButton.BorderThickness = 0
+$aboutButton.Cursor = 'Hand'
+$aboutButton.Effect = New-Object System.Windows.Media.Effects.DropShadowEffect
+$aboutButton.Effect.BlurRadius = 8
+$aboutButton.Effect.ShadowDepth = 2
+$aboutButton.Effect.Opacity = 0.25
+$aboutButton.Effect.Color = '#FF000000'
+
+# 圆角按钮模板
+$aboutButton.Template = New-Object System.Windows.Controls.ControlTemplate(System.Windows.Controls.Button)
+$aboutButtonFactory = New-Object System.Windows.FrameworkElementFactory([System.Windows.Controls.Border])
+$aboutButtonFactory.SetValue([System.Windows.Controls.Border]::CornerRadiusProperty, (New-Object System.Windows.CornerRadius(16)))
+$aboutButtonFactory.SetValue([System.Windows.Controls.Border]::BackgroundProperty, (New-Object System.Windows.TemplateBindingExtension([System.Windows.Controls.Border]::BackgroundProperty)))
+$aboutButtonFactory.SetValue([System.Windows.Controls.Border]::BorderBrushProperty, (New-Object System.Windows.TemplateBindingExtension([System.Windows.Controls.Border]::BorderBrushProperty)))
+$aboutButtonFactory.SetValue([System.Windows.Controls.Border]::BorderThicknessProperty, (New-Object System.Windows.TemplateBindingExtension([System.Windows.Controls.Border]::BorderThicknessProperty)))
+
+$aboutContentFactory = New-Object System.Windows.FrameworkElementFactory([System.Windows.Controls.ContentPresenter])
+$aboutContentFactory.SetValue([System.Windows.Controls.ContentPresenter]::HorizontalAlignmentProperty, [System.Windows.HorizontalAlignment]::Center)
+$aboutContentFactory.SetValue([System.Windows.Controls.ContentPresenter]::VerticalAlignmentProperty, [System.Windows.VerticalAlignment]::Center)
+$aboutButtonFactory.AppendChild($aboutContentFactory)
+
+$aboutButton.Template.VisualTree = $aboutButtonFactory
+
+# 鼠标悬停效果
+$aboutButton.Add_MouseEnter({
+    $this.Opacity = 0.85
+})
+$aboutButton.Add_MouseLeave({
+    $this.Opacity = 1.0
+})
+
+# 点击事件 - 显示关于对话框
+$aboutButton.Add_Click({
+    Show-AboutDialog
+})
+
+[System.Windows.Controls.Panel]::SetZIndex($aboutButton, 101)
+[void]$rightPanel.Children.Add($aboutButton)
 
 # Window control buttons at top right (minimize, maximize, close)
 $windowButtonsPanel = New-Object System.Windows.Controls.StackPanel
@@ -700,18 +920,22 @@ function New-InputGroup {
     [void]$container.Children.Add($labelBlock)
     
     $controlBorder = New-Object System.Windows.Controls.Border
-    # 使用渐变背景
+    # 使用柔和的渐变背景 - 更细腻的过渡
     $controlBorder.Background = New-Object System.Windows.Media.LinearGradientBrush
     $controlBorder.Background.StartPoint = '0,0'
     $controlBorder.Background.EndPoint = '0,1'
     $cbStop1 = New-Object System.Windows.Media.GradientStop
-    $cbStop1.Color = '#FFFFFDF8'
+    $cbStop1.Color = '#FFFFFFFE'
     $cbStop1.Offset = 0
     $cbStop2 = New-Object System.Windows.Media.GradientStop
-    $cbStop2.Color = '#FFFFFAF2'
-    $cbStop2.Offset = 1
+    $cbStop2.Color = '#FFFFFEFB'
+    $cbStop2.Offset = 0.5
+    $cbStop3 = New-Object System.Windows.Media.GradientStop
+    $cbStop3.Color = '#FFFFFDF8'
+    $cbStop3.Offset = 1
     $controlBorder.Background.GradientStops.Add($cbStop1)
     $controlBorder.Background.GradientStops.Add($cbStop2)
+    $controlBorder.Background.GradientStops.Add($cbStop3)
     
     $controlBorder.BorderBrush = '#FFEDD4B0'
     $controlBorder.BorderThickness = 1.5
@@ -1237,7 +1461,7 @@ function Save-SystemSecret {
 function Save-All([bool]$andRun) {
     try {
         if (-not (Test-Path $cfgPath)) { 
-            Show-Error ("配置文件未找到: " + $cfgPath)
+            Show-Error ("配置文件未找到：" + $cfgPath) '错误'
             return
         }
         
@@ -1245,12 +1469,12 @@ function Save-All([bool]$andRun) {
         try {
             $obj = Get-Content $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json
         } catch {
-            Show-Error ("配置文件格式错误: " + $_.Exception.Message)
+            Show-Error ("配置文件格式错误：" + $_.Exception.Message) '错误'
             return
         }
         
         if (-not $obj) { 
-            Show-Error "配置文件内容无效"
+            Show-Error "配置文件内容无效，请检查配置文件。" '错误'
             return
         }
 
@@ -1325,7 +1549,7 @@ function Save-All([bool]$andRun) {
             $jsonContent = ($j | ConvertTo-Json -Depth 50)
             $jsonContent | Out-File -FilePath $cfgPath -Encoding UTF8 -Force
         } catch {
-            Show-Error ("保存配置文件失败: " + $_.Exception.Message)
+            Show-Error ("保存配置文件失败：" + $_.Exception.Message) '错误'
             return
         }
         
@@ -1472,9 +1696,9 @@ function Save-All([bool]$andRun) {
             Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
         } catch { 
             if ($_.Exception.Message -match "Access is denied|拒绝访问|0x80070005") {
-                Show-Error ((CS @(0x274C,0x0020,0x6743,0x9650,0x4E0D,0x8DB3,0xFF1A,0x8BF7,0x4EE5,0x7BA1,0x7406,0x5458,0x8EAB,0x4EFD,0x8FD0,0x884C,0x6B64,0x7A0B,0x5E8F)))
+                Show-Error "权限不足：请以管理员身份运行本程序。" '权限错误'
             } else {
-                Show-Error ((CS @(0x274C,0x0020,0x4EFB,0x52A1,0x521B,0x5EFA,0x5931,0x8D25,0x003A,0x0020)) + $_.Exception.Message)
+                Show-Error ("创建任务失败：" + $_.Exception.Message) '错误'
             }
             return
         }
@@ -1483,22 +1707,20 @@ function Save-All([bool]$andRun) {
             if (Test-Path $startScript) {
                 $psArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File', $startScript)
                 Start-Process -FilePath 'powershell.exe' -ArgumentList $psArgs -WindowStyle Hidden | Out-Null
-                # 保存并连接：显示保存成功和正在连接的提示
-                $successMsg = (CS @(0x2705,0x0020,0x767B,0x5F55,0x542F,0x52A8,0x4EFB,0x52A1,0x5DF2,0x521B,0x5EFA,0x0020,0x0028,0x5EF6,0x8FDF,0x007B,0x0030,0x007D,0x79D2,0x0029,0x000A,0x000A,0x914D,0x7F6E,0x5DF2,0x4FDD,0x5B58,0xFF0C,0x6B63,0x5728,0x8FDE,0x63A5,0x6821,0x56ED,0x7F51,0x2026)) -f $loginDelay
-                $decorativeMsg = (CS @(0x4E3B,0x4EBA,0xFF0C,0x5C0F,0x74F7,0x5F00,0x59CB,0x5DE5,0x4F5C,0x5566,0x007E))
-                try { Show-Info $successMsg -decorative $decorativeMsg } catch {}
+                # 保存并连接：显示专业的成功提示
+                $successMsg = "配置已保存并创建登录启动任务（延迟 {0} 秒）`n`n正在连接校园网络..." -f $loginDelay
+                try { Show-Info $successMsg '操作成功' } catch {}
             } else {
-                Show-Error "start_auth.ps1 not found."
+                Show-Error "未找到认证脚本文件 start_auth.ps1" '错误'
             }
         } else {
-            # 仅保存：显示任务创建成功和配置保存的提示
-            $successMsg = (CS @(0x2705,0x0020,0x767B,0x5F55,0x542F,0x52A8,0x4EFB,0x52A1,0x5DF2,0x521B,0x5EFA,0x0020,0x0028,0x5EF6,0x8FDF,0x007B,0x0030,0x007D,0x79D2,0x0029,0x000A,0x000A,0x914D,0x7F6E,0x5DF2,0x4FDD,0x5B58,0xFF01)) -f $loginDelay
-            $decorativeMsg = (CS @(0x4E3B,0x4EBA,0xFF0C,0x8BBE,0x7F6E,0x5DF2,0x8BB0,0x4F4F,0x5566,0xFF01))
-            Show-Info $successMsg -decorative $decorativeMsg
+            # 仅保存：显示专业的保存成功提示
+            $successMsg = "登录启动任务已创建（延迟 {0} 秒）`n`n配置信息已成功保存。" -f $loginDelay
+            Show-Info $successMsg '配置已保存'
         }
     } catch {
-        $msg3 = "Save failed: " + $_.Exception.Message
-        Show-Error $msg3
+        $msg3 = "保存配置失败：" + $_.Exception.Message
+        Show-Error $msg3 '错误'
     }
 }
 
@@ -1509,30 +1731,25 @@ $BtnRemoveTask.Add_Click({
         $task = Get-ScheduledTask -TaskName 'CampusPortalAutoConnect' -ErrorAction SilentlyContinue
         
         if (-not $task) {
-            $noTaskMsg = (CS @(0x4EFB,0x52A1,0x8BA1,0x5212,0x4E0D,0x5B58,0x5728,0xFF0C,0x65E0,0x9700,0x5220,0x9664))
-            $noTaskDecorativeMsg = (CS @(0x4E3B,0x4EBA,0xFF0C,0x5C0F,0x74F7,0x8FD8,0x6CA1,0x5F00,0x59CB,0x5462,0x007E))
-            Show-Info $noTaskMsg -decorative $noTaskDecorativeMsg
+            Show-Info "当前系统中未找到自动启动任务，无需删除。" '提示'
             return
         }
         
         # Confirm dialog
-        $result = Show-Question `
-            -msg (CS @(0x786E,0x8BA4,0x8981,0x5220,0x9664,0x5F00,0x673A,0x81EA,0x52A8,0x8FDE,0x63A5,0x4EFB,0x52A1,0xFF1F,0x000A,0x000A,0x5220,0x9664,0x540E,0xFF0C,0x7A0B,0x5E8F,0x5C06,0x4E0D,0x4F1A,0x5728,0x767B,0x5F55,0x65F6,0x81EA,0x52A8,0x8FDE,0x63A5,0x6821,0x56ED,0x7F51,0x3002,0x000A,0x5982,0x679C,0x4E0D,0x518D,0x4F7F,0x7528,0x672C,0x7A0B,0x5E8F,0xFF0C,0x8BF7,0x5220,0x9664,0x4EFB,0x52A1,0x540E,0x518D,0x5220,0x9664,0x0020,0x0065,0x0078,0x0065,0x0020,0x6587,0x4EF6,0x3002)) `
-            -title (CS @(0x786E,0x8BA4,0x5220,0x9664)) `
-            -decorative (CS @(0x4E3B,0x4EBA,0x4E0D,0x8981,0x5C0F,0x74F7,0x4E86,0x5417,0xFF1F))
+        $confirmMsg = "确认要删除自动启动任务吗？`n`n删除后，程序将不会在用户登录时自动连接校园网。`n如需完全卸载程序，请在删除任务后手动删除 exe 文件。"
+        $result = Show-Question $confirmMsg '确认删除'
         
         if ($result) {
             # Remove scheduled task
             Unregister-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Confirm:$false -ErrorAction Stop
             
             # Success message
-            $removeSuccessMsg = (CS @(0x2705,0x0020,0x4EFB,0x52A1,0x8BA1,0x5212,0x5DF2,0x6210,0x529F,0x5220,0x9664,0xFF01,0x000A,0x000A,0x7A0B,0x5E8F,0x5C06,0x4E0D,0x4F1A,0x5728,0x767B,0x5F55,0x65F6,0x81EA,0x52A8,0x8FD0,0x884C,0x3002,0x000A,0x5982,0x679C,0x8981,0x5378,0x8F7D,0x7A0B,0x5E8F,0xFF0C,0x8BF7,0x624B,0x52A8,0x5220,0x9664,0x0020,0x0065,0x0078,0x0065,0x0020,0x6587,0x4EF6,0x3002))
-            $removeDecorativeMsg = (CS @(0x5C0F,0x74F7,0x4F1A,0x60F3,0x4E3B,0x4EBA,0x7684,0x007E))
-            Show-Info $removeSuccessMsg -decorative $removeDecorativeMsg
+            $removeSuccessMsg = "自动启动任务已成功删除。`n`n程序将不再在登录时自动运行。`n如需完全卸载，请手动删除 exe 文件。"
+            Show-Info $removeSuccessMsg '删除成功'
         }
     } catch {
-        $errMsg = (CS @(0x5220,0x9664,0x4EFB,0x52A1,0x5931,0x8D25,0xFF1A)) + $_.Exception.Message
-        Show-Error $errMsg
+        $errMsg = "删除任务失败：" + $_.Exception.Message
+        Show-Error $errMsg '错误'
     }
 })
 
