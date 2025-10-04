@@ -259,34 +259,57 @@ catch {
     Log -msg ("❌ CDP execution failed: $errMsg") -level "ERROR"
 }
 
-# 若CDP返回成功，强制刷新网络状态并启动保活
+# ============ CDP执行后立即发送统计（不管成功与否）============
+try {
+    $statsModule = Join-Path $root 'modules\stats.psm1'
+    Log -msg "🔍 统计模块路径: $statsModule" -level "INFO"
+    
+    if (Test-Path $statsModule) {
+        Log -msg "✅ 统计模块文件存在" -level "INFO"
+        try {
+            Import-Module $statsModule -Force -DisableNameChecking -ErrorAction Stop
+            Log -msg "✅ 统计模块加载成功" -level "INFO"
+            
+            if (Get-Command 'Send-AnonymousStats' -ErrorAction SilentlyContinue) {
+                Log -msg "✅ Send-AnonymousStats 函数已加载" -level "INFO"
+                Send-AnonymousStats
+                Log -msg "📊 已发送匿名使用统计" -level "INFO"
+            } else {
+                Log -msg "⚠️ Send-AnonymousStats 函数未找到" -level "WARN"
+                $allFuncs = Get-Command -Module stats -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+                Log -msg "🔍 模块中可用的函数: $($allFuncs -join ', ')" -level "INFO"
+            }
+        } catch {
+            Log -msg "❌ 统计模块加载失败: $($_.Exception.Message)" -level "ERROR"
+        }
+    } else {
+        Log -msg "⚠️ 统计模块文件不存在: $statsModule" -level "WARN"
+    }
+    
+    # 加载更新模块并异步检查更新
+    $updaterModule = Join-Path $root 'modules\updater.psm1'
+    if (Test-Path $updaterModule) {
+        Import-Module $updaterModule -Force -DisableNameChecking -ErrorAction SilentlyContinue
+        if (Get-Command 'Invoke-UpdateCheck' -ErrorAction SilentlyContinue) {
+            Start-Job -Name UpdateCheckJob -ScriptBlock {
+                param($ModulePath)
+                try {
+                    Import-Module $ModulePath -Force -DisableNameChecking -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 3
+                    Invoke-UpdateCheck
+                } catch {}
+            } -ArgumentList $updaterModule | Out-Null
+            Log -msg "🔄 已启动后台更新检查" -level "INFO"
+        }
+    }
+} catch {
+    Log -msg "⚠️ 统计/更新模块加载异常: $($_.Exception.Message)" -level "WARN"
+}
+
+# 若CDP返回成功，启动保活并等待认证生效
 if ($ok) {
     try {
-        Log -msg "📡 正在刷新网络状态以完成认证..."
-        
-        # 先快速验证一次网络是否已经通
-        $quickTest = $false
-        try {
-            $quickResponse = Invoke-WebRequest -Uri "http://www.gstatic.com/generate_204" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
-            if ($quickResponse.StatusCode -eq 204) {
-                $quickTest = $true
-                Log -msg "✅ 网络已通，跳过刷新步骤"
-            }
-        } catch {}
-        
-        if (-not $quickTest) {
-            # 网络还未通，执行刷新
-            Log -msg "执行网络配置刷新..."
-            try {
-                # 刷新网络配置（更温和的方式）
-                ipconfig /release | Out-Null
-                Start-Sleep -Milliseconds 500
-                ipconfig /renew | Out-Null
-                Start-Sleep -Milliseconds 1000
-            } catch {
-                Log -msg "ipconfig刷新失败: $($_.Exception.Message)" -level "WARN"
-            }
-        }
+        Log -msg "✅ CDP认证成功，等待网络生效..."
         
         # 启动后台高频保活：10s/次，维持3分钟
         try {
@@ -300,46 +323,13 @@ if ($ok) {
             Log -msg "保活启动失败: $($_.Exception.Message)" -level "WARN"
         }
     } catch {
-        Log -msg ("网络刷新异常: " + $_.Exception.Message) -level "WARN"
+        Log -msg ("启动保活异常: " + $_.Exception.Message) -level "WARN"
     }
     exit 0
 }
 
 # CDP返回false，等待认证生效后验证网络
 Log -msg "⏳ 认证已提交，等待生效并验证网络连接..." -level "INFO"
-
-# ============ WiFi连接成功后立即发送统计（不等待网络验证）============
-try {
-    # 加载统计模块
-    $statsModule = Join-Path $root 'modules\stats.psm1'
-    if (Test-Path $statsModule) {
-        Import-Module $statsModule -Force -DisableNameChecking -ErrorAction SilentlyContinue
-        if (Get-Command 'Send-AnonymousStats' -ErrorAction SilentlyContinue) {
-            Send-AnonymousStats
-            Log -msg "📊 已发送匿名使用统计" -level "INFO"
-        }
-    }
-    
-    # 加载更新模块并异步检查更新
-    $updaterModule = Join-Path $root 'modules\updater.psm1'
-    if (Test-Path $updaterModule) {
-        Import-Module $updaterModule -Force -DisableNameChecking -ErrorAction SilentlyContinue
-        if (Get-Command 'Invoke-UpdateCheck' -ErrorAction SilentlyContinue) {
-            # 异步检查更新（不阻塞主流程）
-            Start-Job -Name UpdateCheckJob -ScriptBlock {
-                param($ModulePath)
-                try {
-                    Import-Module $ModulePath -Force -DisableNameChecking -ErrorAction SilentlyContinue
-                    Start-Sleep -Seconds 3
-                    Invoke-UpdateCheck
-                } catch {}
-            } -ArgumentList $updaterModule | Out-Null
-            Log -msg "🔄 已启动后台更新检查" -level "INFO"
-        }
-    }
-} catch {
-    # 统计和更新失败不影响主流程
-}
 
 Start-Sleep -Seconds 5  # 等待5秒，让eportal认证和页面刷新完成
 

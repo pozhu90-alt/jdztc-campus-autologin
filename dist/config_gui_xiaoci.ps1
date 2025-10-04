@@ -1666,7 +1666,8 @@ function Save-All([bool]$andRun) {
         } catch {}
 
         # register scheduled task based on user selected delay
-        $delay = [int]$SldDelay.Value
+        # 使用与配置文件一致的延迟值（支持小数）
+        $loginDelay = $userDelay
         
         # 创建两个动作：先确保WLAN启动，再执行认证
         $authPath = Join-Path $stableRoot 'scripts\start_auth.ps1'
@@ -1677,14 +1678,10 @@ function Save-All([bool]$andRun) {
         
         # 使用登录启动触发器（不受Windows快速启动影响）
         $trigger = New-ScheduledTaskTrigger -AtLogOn
-        # 使用用户设置的延迟时间（0.1-3秒）
-        $loginDelay = [Math]::Round($delay, 1)
-        # 转换为秒数字符串（支持小数）
-        $delayStr = if ($loginDelay -eq [int]$loginDelay) { 
-            "PT{0}S" -f [int]$loginDelay 
-        } else { 
-            "PT{0}S" -f $loginDelay 
-        }
+        # Windows 任务计划的 Delay 只支持整数秒，需要向上取整
+        # 用户设置的延迟时间（0.1-3秒）会被转换为整数秒
+        $loginDelayInt = [Math]::Max(1, [Math]::Ceiling($loginDelay))
+        $delayStr = "PT{0}S" -f $loginDelayInt
         $trigger.Delay = $delayStr
         # 显式启用触发器
         $trigger.Enabled = $true
@@ -1693,7 +1690,14 @@ function Save-All([bool]$andRun) {
             # 登录启动模式：使用Principal方式（无需密码）
             $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -RunLevel Highest
             $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-            Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+            $taskResult = Register-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force -ErrorAction Stop
+            
+            # 验证任务是否真的被创建
+            Start-Sleep -Milliseconds 500
+            $verifyTask = Get-ScheduledTask -TaskName 'CampusPortalAutoConnect' -ErrorAction SilentlyContinue
+            if (-not $verifyTask) {
+                throw "任务创建后验证失败：任务不存在"
+            }
         } catch { 
             if ($_.Exception.Message -match "Access is denied|拒绝访问|0x80070005") {
                 Show-Error "权限不足：请以管理员身份运行本程序。" '权限错误'
@@ -1708,14 +1712,14 @@ function Save-All([bool]$andRun) {
                 $psArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File', $startScript)
                 Start-Process -FilePath 'powershell.exe' -ArgumentList $psArgs -WindowStyle Hidden | Out-Null
                 # 保存并连接：显示专业的成功提示
-                $successMsg = "配置已保存并创建登录启动任务（延迟 {0} 秒）`n`n正在连接校园网络..." -f $loginDelay
+                $successMsg = "配置已保存并创建登录启动任务（延迟 {0} 秒）`n`n正在连接校园网络..." -f $loginDelayInt
                 try { Show-Info $successMsg '操作成功' } catch {}
             } else {
                 Show-Error "未找到认证脚本文件 start_auth.ps1" '错误'
             }
         } else {
             # 仅保存：显示专业的保存成功提示
-            $successMsg = "登录启动任务已创建（延迟 {0} 秒）`n`n配置信息已成功保存。" -f $loginDelay
+            $successMsg = "登录启动任务已创建（延迟 {0} 秒）`n`n配置信息已成功保存。" -f $loginDelayInt
             Show-Info $successMsg '配置已保存'
         }
     } catch {
@@ -1727,28 +1731,111 @@ function Save-All([bool]$andRun) {
 # Remove Task Button Handler
 $BtnRemoveTask.Add_Click({
     try {
-        # Check if task exists
-        $task = Get-ScheduledTask -TaskName 'CampusPortalAutoConnect' -ErrorAction SilentlyContinue
+        # Check if task exists (using schtasks to avoid XML parsing errors)
+        $taskExists = $false
+        try {
+            $schtasksOutput = schtasks /Query /TN "CampusPortalAutoConnect" 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $taskExists = $true
+            }
+        } catch {
+            # Try PowerShell method as fallback
+            $task = Get-ScheduledTask -TaskName 'CampusPortalAutoConnect' -ErrorAction SilentlyContinue
+            if ($task) {
+                $taskExists = $true
+            }
+        }
         
-        if (-not $task) {
-            Show-Info "当前系统中未找到自动启动任务，无需删除。" '提示'
+        if (-not $taskExists) {
+            Show-Info "当前系统中未找到自动启动任务。" '提示'
             return
         }
         
-        # Confirm dialog
-        $confirmMsg = "确认要删除自动启动任务吗？`n`n删除后，程序将不会在用户登录时自动连接校园网。`n如需完全卸载程序，请在删除任务后手动删除 exe 文件。"
+        # Confirm dialog - single confirmation for both task and data removal
+        $confirmMsg = "确认要删除自动启动任务吗？`n`n此操作将：`n• 删除登录自动连接任务`n• 清理程序配置和数据`n`n删除后需要重新配置程序。"
         $result = Show-Question $confirmMsg '确认删除'
         
         if ($result) {
-            # Remove scheduled task
-            Unregister-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Confirm:$false -ErrorAction Stop
+            $hasError = $false
+            $errorDetails = ""
             
-            # Success message
-            $removeSuccessMsg = "自动启动任务已成功删除。`n`n程序将不再在登录时自动运行。`n如需完全卸载，请手动删除 exe 文件。"
-            Show-Info $removeSuccessMsg '删除成功'
+            # Remove scheduled task (force delete even if XML is corrupted)
+            try {
+                # Try PowerShell method first
+                Unregister-ScheduledTask -TaskName 'CampusPortalAutoConnect' -Confirm:$false -ErrorAction Stop
+            } catch {
+                # If PowerShell method fails (e.g., due to corrupted XML), use schtasks
+                try {
+                    $deleteResult = schtasks /Delete /TN "CampusPortalAutoConnect" /F 2>&1
+                    if ($LASTEXITCODE -ne 0) {
+                        throw "schtasks 删除失败"
+                    }
+                } catch {
+                    $hasError = $true
+                    $errorDetails = "任务删除失败：$($_.Exception.Message)"
+                }
+            }
+            
+            # Clean application data (only important files, skip GUI images)
+            if (-not $hasError) {
+                $appDataPath = Join-Path $env:APPDATA 'CampusNet'
+                $dataCleanSuccess = $false
+                
+                if (Test-Path $appDataPath) {
+                    try {
+                        # Clean up any running jobs first
+                        Get-Job | Where-Object { $_.Name -match 'KeepAlive|UpdateCheck|Stats' } | Remove-Job -Force -ErrorAction SilentlyContinue
+                        
+                        # Delete important data files (configs, secrets, logs)
+                        $importantFiles = @(
+                            'config.json',
+                            'config.default.json',
+                            'secrets.json',
+                            'campus_network.log',
+                            'wifi_state.json'
+                        )
+                        
+                        foreach ($file in $importantFiles) {
+                            $filePath = Join-Path $appDataPath $file
+                            if (Test-Path $filePath) {
+                                try { Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue } catch {}
+                            }
+                        }
+                        
+                        # Delete script modules and other directories (but skip gui folder)
+                        $foldersToDelete = @('scripts', 'portal_autofill', 'tasks')
+                        foreach ($folder in $foldersToDelete) {
+                            $folderPath = Join-Path $appDataPath $folder
+                            if (Test-Path $folderPath) {
+                                try { Remove-Item -Path $folderPath -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+                            }
+                        }
+                        
+                        $dataCleanSuccess = $true
+                        
+                    } catch {
+                        $dataCleanSuccess = $false
+                    }
+                } else {
+                    $dataCleanSuccess = $true
+                }
+            }
+            
+            # Show result
+            if (-not $hasError) {
+                if ($dataCleanSuccess) {
+                    $removeSuccessMsg = "程序已卸载。`n`n✅ 自动启动任务已删除`n✅ 配置和凭据已清理`n`n如需重新使用，请重新运行程序。"
+                    Show-Info $removeSuccessMsg '卸载成功'
+                } else {
+                    $removeSuccessMsg = "任务已删除。`n`n✅ 自动启动任务已删除`n⚠️ 部分数据清理失败`n`n如需重新使用，请重新运行程序。"
+                    Show-Info $removeSuccessMsg '部分成功'
+                }
+            } else {
+                Show-Error $errorDetails '删除失败'
+            }
         }
     } catch {
-        $errMsg = "删除任务失败：" + $_.Exception.Message
+        $errMsg = "删除操作失败：" + $_.Exception.Message
         Show-Error $errMsg '错误'
     }
 })
