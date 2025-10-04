@@ -15,8 +15,16 @@
 
 function Enable-WifiAdapter {
 	try {
-		$wifi = Get-NetAdapter | Where-Object { $_.Status -ne 'Up' -and ($_.Name -match 'Wi-?Fi|Wireless|802\.11') } | Select-Object -First 1
-		if ($wifi) { Enable-NetAdapter -Name $wifi.Name -Confirm:$false -ErrorAction SilentlyContinue }
+		# 只启用真正被禁用(Disabled/Not Present)的WiFi适配器
+		# 不要碰正在连接(Connecting)、已断开(Disconnected)或已连接(Up)的适配器
+		$wifi = Get-NetAdapter | Where-Object { 
+			($_.Status -eq 'Disabled' -or $_.Status -eq 'Not Present') -and 
+			($_.Name -match 'Wi-?Fi|Wireless|802\.11')
+		} | Select-Object -First 1
+		if ($wifi) { 
+			Enable-NetAdapter -Name $wifi.Name -Confirm:$false -ErrorAction SilentlyContinue
+			Start-Sleep -Milliseconds 500  # 等待网卡启用完成
+		}
 	} catch {}
 }
 
