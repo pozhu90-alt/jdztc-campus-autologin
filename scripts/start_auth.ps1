@@ -89,6 +89,19 @@ try {
 $ssidList = @()
 try { $ssidList = @($cfg.wifi_names) } catch { $ssidList = @() }
 
+# 方案1：运营商为"无"时，自动排除 JCI（需要运营商认证）
+# JCItest 保留，因为它可能不需要运营商
+$ispValue = ''
+try { $ispValue = [string]$cfg.isp } catch { $ispValue = '' }
+if ([string]::IsNullOrWhiteSpace($ispValue)) {
+    # 运营商为空，过滤掉 JCI
+    $originalCount = $ssidList.Count
+    $ssidList = @($ssidList | Where-Object { $_ -ne 'JCI' })
+    if ($ssidList.Count -lt $originalCount) {
+        Log -msg "运营商未设置，已自动排除 JCI 网络（需要运营商认证）" -level "INFO"
+    }
+}
+
 if (-not $allScan -or $allScan.Count -eq 0) {
     Log -msg "附近未发现任何 Wi‑Fi，当前可能不在校园网覆盖范围内，跳过认证。" -level "WARN"
     exit 0
@@ -127,14 +140,14 @@ if ($probeInfo -and $probeInfo.IPv4 -and ($probeInfo.IPv4 -notmatch '^169\.')) {
     Log -msg "WiFi already connected: IP=$($probeInfo.IPv4)"
     $connected = $true
 } else {
-    # 尝试自动连接
+    # 尝试自动连接（使用过滤后的网络列表）
     Log -msg "Attempting WiFi connection (smart scan) ..."
     $connectOk = $false
     # 启动阶段网卡可能尚未完全就绪：尝试多次快速连接
     try {
         $connectOk = $false
         for ($t=0; $t -lt 2 -and -not $connectOk; $t++) {
-            $connectOk = Connect-WifiSmart -WifiNames $cfg.wifi_names -QuickWaitSec 2 -SignalMargin 10
+            $connectOk = Connect-WifiSmart -WifiNames $ssidList -QuickWaitSec 2 -SignalMargin 10
             if (-not $connectOk) { Start-Sleep -Milliseconds 300 }
         }
     } catch { $connectOk = $false }

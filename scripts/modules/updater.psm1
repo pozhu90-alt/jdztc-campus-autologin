@@ -70,22 +70,17 @@ function Show-UpdateDialog {
         $dialog.Background = 'Transparent'
         $dialog.Topmost = $true
         
-        # 主边框
+        # 主边框（跟随主程序主题色，若可用）
         $mainBorder = New-Object System.Windows.Controls.Border
         $mainBorder.CornerRadius = 15
-        $mainBorder.Background = New-Object System.Windows.Media.LinearGradientBrush
-        $mainBorder.Background.StartPoint = '0,0'
-        $mainBorder.Background.EndPoint = '0,1'
-        
-        # 渐变背景（蓝色主题）
-        $bg1 = New-Object System.Windows.Media.GradientStop
-        $bg1.Color = '#FFEEF5FF'
-        $bg1.Offset = 0
-        $bg2 = New-Object System.Windows.Media.GradientStop
-        $bg2.Color = '#FFFFFFFF'
-        $bg2.Offset = 1
-        $mainBorder.Background.GradientStops.Add($bg1)
-        $mainBorder.Background.GradientStops.Add($bg2)
+        try {
+            if ($global:themes -and $global:currentTheme -ge 0) {
+                $t = $global:themes[$global:currentTheme]
+                $mainBorder.Background = $t.DialogBg
+            } else {
+                $mainBorder.Background = '#FFFFFFFF'
+            }
+        } catch { $mainBorder.Background = '#FFFFFFFF' }
         
         # 阴影
         $mainBorder.Effect = New-Object System.Windows.Media.Effects.DropShadowEffect
@@ -104,7 +99,9 @@ function Show-UpdateDialog {
         $titleBlock.Text = "🎉 发现新版本！"
         $titleBlock.FontSize = 24
         $titleBlock.FontWeight = 'Bold'
-        $titleBlock.Foreground = '#FF2C3E50'
+        try {
+            if ($global:themes -and $global:currentTheme -ge 0) { $titleBlock.Foreground = $global:themes[$global:currentTheme].DialogTitle } else { $titleBlock.Foreground = '#FF2C3E50' }
+        } catch { $titleBlock.Foreground = '#FF2C3E50' }
         $titleBlock.TextAlignment = 'Center'
         $titleBlock.Margin = '0,0,0,20'
         [void]$stackPanel.Children.Add($titleBlock)
@@ -113,7 +110,7 @@ function Show-UpdateDialog {
         $versionText = New-Object System.Windows.Controls.TextBlock
         $versionText.Text = "最新版本：v$($VersionInfo.latestVersion)`n当前版本：v$script:CurrentVersion"
         $versionText.FontSize = 14
-        $versionText.Foreground = '#FF5D6D7E'
+        try { $versionText.Foreground = ($global:themes[$global:currentTheme]).DialogText } catch { $versionText.Foreground = '#FF5D6D7E' }
         $versionText.TextAlignment = 'Center'
         $versionText.Margin = '0,0,0,20'
         [void]$stackPanel.Children.Add($versionText)
@@ -123,7 +120,7 @@ function Show-UpdateDialog {
         $logLabel.Text = "✨ 更新内容："
         $logLabel.FontSize = 14
         $logLabel.FontWeight = 'Bold'
-        $logLabel.Foreground = '#FF34495E'
+        try { $logLabel.Foreground = ($global:themes[$global:currentTheme]).DialogTitle } catch { $logLabel.Foreground = '#FF34495E' }
         $logLabel.Margin = '0,0,0,10'
         [void]$stackPanel.Children.Add($logLabel)
         
@@ -135,7 +132,7 @@ function Show-UpdateDialog {
         $logText = New-Object System.Windows.Controls.TextBlock
         $logText.Text = $VersionInfo.updateLog
         $logText.FontSize = 12
-        $logText.Foreground = '#FF5D6D7E'
+        try { $logText.Foreground = ($global:themes[$global:currentTheme]).DialogText } catch { $logText.Foreground = '#FF5D6D7E' }
         $logText.TextWrapping = 'Wrap'
         $logText.Padding = '10'
         $logScroll.Content = $logText
@@ -163,8 +160,13 @@ function Show-UpdateDialog {
         $updateBtn.Margin = '10,0'
         $updateBtn.FontSize = 14
         $updateBtn.FontWeight = 'Bold'
-        $updateBtn.Foreground = 'White'
-        $updateBtn.Background = '#FF3498DB'
+        try {
+            $updateBtn.Foreground = ($global:themes[$global:currentTheme]).DialogAccentFg
+            $updateBtn.Background = ($global:themes[$global:currentTheme]).DialogAccent
+        } catch {
+            $updateBtn.Foreground = 'White'
+            $updateBtn.Background = '#FF3498DB'
+        }
         $updateBtn.BorderThickness = 0
         $updateBtn.Cursor = 'Hand'
         $updateBtn.Tag = 'Update'
@@ -181,8 +183,13 @@ function Show-UpdateDialog {
         $laterBtn.Height = 36
         $laterBtn.Margin = '10,0'
         $laterBtn.FontSize = 14
-        $laterBtn.Foreground = '#FF5D6D7E'
-        $laterBtn.Background = '#FFECF0F1'
+        try {
+            $laterBtn.Foreground = ($global:themes[$global:currentTheme]).DialogCancelFg
+            $laterBtn.Background = ($global:themes[$global:currentTheme]).DialogCancelBg
+        } catch {
+            $laterBtn.Foreground = '#FF5D6D7E'
+            $laterBtn.Background = '#FFECF0F1'
+        }
         $laterBtn.BorderThickness = 0
         $laterBtn.Cursor = 'Hand'
         $laterBtn.Tag = 'Later'
