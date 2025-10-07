@@ -1,0 +1,36 @@
+# 敏感信息
+config.json
+secrets.json
+wifi_state.json
+*.log
+
+# 编译产物
+dist/*.exe
+dist/*.exe.config
+dist/obf/
+
+# 临时文件
+*.tmp
+*.bak
+*~
+*.swp
+
+# 系统文件
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# 内部文档（不公开）
+实施计划.md
+项目状态报告_*.md
+验证系统设计.md
+景德镇学校配置参考.md
+
+# 测试文件
+release/
+

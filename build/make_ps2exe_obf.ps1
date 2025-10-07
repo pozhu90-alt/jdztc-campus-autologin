@@ -2,7 +2,8 @@ param(
     [string]$OutputName = '小瓷连网.exe',
     [switch]$Obfuscate,
     [switch]$Blank,
-    [switch]$Debug
+    [switch]$Debug,
+    [switch]$NoLog
 )
 
 $ErrorActionPreference = 'SilentlyContinue'
@@ -14,22 +15,38 @@ $dist   = Join-Path $root 'dist'
 if (-not (Test-Path $dist)) { New-Item -ItemType Directory -Path $dist | Out-Null }
 
 # 1) Prepare embedded files mapping (target -> source)
-$appData = '%APPDATA%\\CampusNet'
+$appData = '%APPDATA%\CampusNet'
 $embed = @{}
-$embed["$appData\\gui\\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui_xiaoci.ps1')
-$embed["$appData\\gui\\avatar.png"]                  = (Join-Path $root 'dist\avatar.png')
-$embed["$appData\\gui\\minimize_avatar.png"]         = (Join-Path $root 'dist\minimize_avatar.png')
-$embed["$appData\\gui\\maximize_avatar.png"]         = (Join-Path $root 'dist\maximize_avatar.png')
-$embed["$appData\\gui\\close_avatar.png"]            = (Join-Path $root 'dist\close_avatar.png')
-$embed["$appData\\scripts\\start_auth.ps1"]          = (Join-Path $root 'scripts\start_auth.ps1')
-$embed["$appData\\scripts\\modules\\wifi.psm1"]     = (Join-Path $root 'scripts\modules\wifi.psm1')
-$embed["$appData\\scripts\\modules\\netdetect.psm1"] = (Join-Path $root 'scripts\modules\netdetect.psm1')
-$embed["$appData\\scripts\\modules\\security.psm1"]  = (Join-Path $root 'scripts\modules\security.psm1')
-$embed["$appData\\scripts\\modules\\cdp.psm1"]       = (Join-Path $root 'scripts\modules\cdp.psm1')
-$embed["$appData\\scripts\\modules\\stats.psm1"]     = (Join-Path $root 'scripts\modules\stats.psm1')
-$embed["$appData\\scripts\\modules\\updater.psm1"]   = (Join-Path $root 'scripts\modules\updater.psm1')
-$embed["$appData\\portal_autofill\\autofill_core.js"] = (Join-Path $root 'portal_autofill\autofill_core.js')
-$embed["$appData\\tasks\\install_autostart.ps1"]      = (Join-Path $root 'tasks\install_autostart.ps1')
+$embed["$appData\gui\config_gui.ps1"]              = (Join-Path $root 'dist\config_gui_xiaoci.ps1')
+$embed["$appData\gui\avatar.png"]                  = (Join-Path $root 'dist\avatar.png')
+$embed["$appData\gui\minimize_avatar.png"]         = (Join-Path $root 'dist\minimize_avatar.png')
+$embed["$appData\gui\maximize_avatar.png"]         = (Join-Path $root 'dist\maximize_avatar.png')
+$embed["$appData\gui\close_avatar.png"]            = (Join-Path $root 'dist\close_avatar.png')
+$embed["$appData\gui\donation_qrcode.png"]         = (Join-Path $root 'dist\donation_qrcode.png')
+$embed["$appData\gui\qq_group_qrcode.png"]         = (Join-Path $root 'dist\qq_group_qrcode.png')
+
+# Select start_auth version: NoLog mode uses nolog, otherwise use normal version
+$startAuthSrc = (Join-Path $root 'scripts\start_auth.ps1')
+if ($NoLog) {
+    $noLogAuth = Join-Path $root 'scripts\start_auth_nolog.ps1'
+    if (Test-Path $noLogAuth) { 
+        $startAuthSrc = $noLogAuth 
+        Write-Host "✓ Using NO-LOG version (start_auth_nolog.ps1)" -ForegroundColor Cyan
+    } else {
+        Write-Host "✗ No-log version not found at: $noLogAuth" -ForegroundColor Red
+    }
+} else {
+    Write-Host "Using normal version with logging" -ForegroundColor Gray
+}
+$embed["$appData\scripts\start_auth.ps1"]          = $startAuthSrc
+$embed["$appData\scripts\modules\wifi.psm1"]     = (Join-Path $root 'scripts\modules\wifi.psm1')
+$embed["$appData\scripts\modules\netdetect.psm1"] = (Join-Path $root 'scripts\modules\netdetect.psm1')
+$embed["$appData\scripts\modules\security.psm1"]  = (Join-Path $root 'scripts\modules\security.psm1')
+$embed["$appData\scripts\modules\cdp.psm1"]       = (Join-Path $root 'scripts\modules\cdp.psm1')
+$embed["$appData\scripts\modules\stats.psm1"]     = (Join-Path $root 'scripts\modules\stats.psm1')
+$embed["$appData\scripts\modules\updater.psm1"]   = (Join-Path $root 'scripts\modules\updater.psm1')
+$embed["$appData\portal_autofill\autofill_core.js"] = (Join-Path $root 'portal_autofill\autofill_core.js')
+$embed["$appData\tasks\install_autostart.ps1"]      = (Join-Path $root 'tasks\install_autostart.ps1')
 
 # Select embedded config: Blank mode uses build\config.blank.json, otherwise use root config.json
 $cfgSrc = (Join-Path $root 'config.json')
@@ -37,13 +54,13 @@ if ($Blank) {
     $blankCfg = Join-Path $build 'config.blank.json'
     if (Test-Path $blankCfg) { $cfgSrc = $blankCfg }
 }
-$embed["$appData\\config.default.json"] = $cfgSrc
+$embed["$appData\config.default.json"] = $cfgSrc
 
 # Non-Blank mode includes last successful Wi-Fi state
 if (-not $Blank) {
     $wifiState = Join-Path $root 'wifi_state.json'
     if (Test-Path $wifiState) { 
-        $embed["$appData\\wifi_state.json"] = $wifiState 
+        $embed["$appData\wifi_state.json"] = $wifiState 
     }
 }
 
